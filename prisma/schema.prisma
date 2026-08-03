@@ -1,0 +1,89 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// A lightweight, local "current user" profile used to scope saved papers and search history.
+// The app uses a single demo profile (id="local") by default for simplicity.
+model UserProfile {
+  id          String   @id @default(cuid())
+  email       String   @unique
+  name        String?
+  affiliation String?
+  researchInterests String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  savedPapers   SavedPaper[]
+  searchHistory SearchHistory[]
+  favoriteTopics FavoriteTopic[]
+  exportHistory  ExportRecord[]
+}
+
+model SavedPaper {
+  id          String   @id @default(cuid())
+  userId      String
+  paperId     String
+  title       String
+  authors     String
+  abstract    String?
+  year        Int?
+  doi         String?
+  pdfLink     String?
+  citationCount Int?
+  publisher   String?
+  source      String?
+  keywords    String?
+  openAccess  Boolean  @default(false)
+  aiSummary   String?
+  savedAt     DateTime @default(now())
+
+  user        UserProfile @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([paperId])
+}
+
+model SearchHistory {
+  id          String   @id @default(cuid())
+  userId      String
+  query       String
+  filters     String?
+  resultCount Int?
+  createdAt   DateTime @default(now())
+
+  user        UserProfile @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model FavoriteTopic {
+  id          String   @id @default(cuid())
+  userId      String
+  topic       String
+  createdAt   DateTime @default(now())
+
+  user        UserProfile @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, topic])
+  @@index([userId])
+}
+
+model ExportRecord {
+  id          String   @id @default(cuid())
+  userId      String
+  paperTitle  String
+  format      String
+  createdAt   DateTime @default(now())
+
+  user        UserProfile @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
