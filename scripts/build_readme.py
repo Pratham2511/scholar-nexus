@@ -1,4 +1,11 @@
-# ScholarAI v2.0 — AI-Powered Multi-Source Research Paper Discovery, Synthesis & Exploration Platform
+"""
+Build the comprehensive V2-aware README.md for ScholarAI.
+Writes the full file in one atomic operation.
+"""
+
+OUT = "/home/z/my-project/README.md"
+
+CONTENT = r"""# ScholarAI v2.0 — AI-Powered Multi-Source Research Paper Discovery, Synthesis & Exploration Platform
 
 > Describe your research in plain English. ScholarAI understands your intent, queries **9 academic sources in parallel** (Semantic Scholar, arXiv, Crossref, PubMed, OpenAlex, IEEE Xplore, bioRxiv, medRxiv, Europe PMC), removes duplicates, ranks papers intelligently, generates **AI-powered insights** for every paper, and lets you **explore citation networks visually**, **synthesize evidence** across results, **chat with PDFs**, **organize collections**, **follow authors**, and **subscribe to search alerts**.
 
@@ -1346,3 +1353,15 @@ Items explicitly deferred from V2 or identified as natural next steps:
 **V2.0** adds on top: 5 new academic sources (9 total), agentic query expansion, citation graph explorer, visual D3.js paper network, AI evidence synthesis across results, collections/reading lists, author pages with follow, search alerts (persistence layer), PDF full-text Q&A chat, dark theme by default, compare winner highlighting, results summary strip, relevance progress bars, percentile badges, typewriter search, and a stats bar — all building on the V1 codebase without rewriting existing functionality.
 
 The codebase is structured for clarity (each source adapter is isolated, the ranking engine is a pure function, the AI layer is a thin wrapper with fallbacks), and is ready for the V3 enhancements listed above.
+"""
+
+with open(OUT, "w", encoding="utf-8") as f:
+    f.write(CONTENT)
+
+# Sanity check
+import os
+size = os.path.getsize(OUT)
+lines = CONTENT.count("\n") + 1
+print(f"Wrote {OUT}")
+print(f"Size: {size:,} bytes")
+print(f"Lines: {lines}")
