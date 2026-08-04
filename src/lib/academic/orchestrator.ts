@@ -44,6 +44,14 @@ interface OrchestratorOptions {
    * This catches papers a single query would miss.
    */
   expandQuery?: boolean;
+  /**
+   * V2.1 — Overall deadline for the whole multi-source search in milliseconds.
+   * When the deadline fires, any source that hasn't returned yet is abandoned
+   * and the response is built from whatever has arrived. This prevents slow
+   * sources from pushing total response time past platform proxy timeouts.
+   * Default: 9000 (9 seconds).
+   */
+  overallTimeoutMs?: number;
 }
 
 /**
@@ -52,6 +60,11 @@ interface OrchestratorOptions {
  * V2: If `expandQuery` is true (default), runs up to 3 search-term variants per source
  * concurrently and merges the results before deduplication. This significantly improves
  * recall for ambiguous queries.
+ *
+ * V2.1 fix: Added an overall deadline (`overallTimeoutMs`, default 9s) that returns
+ * whatever results have arrived by then — prevents slow sources from blowing past
+ * platform proxy timeouts (which typically sit at 10-30s) and causing "Search failed"
+ * errors in the browser. Per-source timeout reduced from 12s → 8s.
  */
 export async function searchMultipleSources(
   understood: AIUnderstoodQuery,
@@ -61,10 +74,17 @@ export async function searchMultipleSources(
   const {
     perSourceLimit = 25,
     finalLimit = 50,
-    timeoutMs = 12000,
+    timeoutMs = 8000,
     sources = [...DEFAULT_SOURCES],
     expandQuery = true,
   } = options;
+
+  // Overall deadline — return partial results after this even if some sources are still pending.
+  // This is the critical fix for the "Search failed" browser error: the platform proxy in front
+  // of the dev server has its own timeout, and 9 sources × 3 search terms with a 12s per-source
+  // timeout was pushing total time to 15-34s. Capping at 9s keeps total response < 10s + AI time.
+  const overallTimeoutMs = options.overallTimeoutMs ?? 9000;
+  const deadline = startTime + overallTimeoutMs;
 
   // V2: Build the list of search terms to try. Always include the primary term.
   // The LLM returns up to 3 searchTerms in the AIUnderstoodQuery.
@@ -105,23 +125,71 @@ export async function searchMultipleSources(
     }
   }
 
-  // Fan out all (source × term) requests concurrently
+  // Fan out all (source × term) requests concurrently.
+  // We use a shared results array + Promise.race against a deadline so that
+  // slow sources don't blow past platform proxy timeouts.
   const taskStarts = tasks.map((t) => ({
     source: t.source,
+    startedAt: Date.now(),
+    done: false as boolean,
+    result: null as null | {
+      source: string;
+      papers: AcademicPaper[];
+      success: boolean;
+      error?: string;
+      durationMs: number;
+    },
     promise: t.fn()
-      .then((papers) => ({ source: t.source, papers, success: true as const, error: undefined as string | undefined }))
+      .then((papers) => ({
+        source: t.source,
+        papers,
+        success: true as const,
+        error: undefined as string | undefined,
+      }))
       .catch((err: unknown) => ({
         source: t.source,
         papers: [] as AcademicPaper[],
         success: false as const,
         error: err instanceof Error ? err.message : String(err),
       })),
-    startedAt: Date.now(),
   }));
 
-  const results = await Promise.all(
-    taskStarts.map((s) => s.promise.then((r) => ({ ...r, durationMs: Date.now() - s.startedAt }))),
-  );
+  // Attach .then to each promise to mark completion + record the duration
+  taskStarts.forEach((s) => {
+    s.promise.then((r) => {
+      s.done = true;
+      s.result = { ...r, durationMs: Date.now() - s.startedAt };
+    });
+  });
+
+  // Wait for either ALL tasks to finish OR the deadline (whichever first)
+  const remainingMs = Math.max(0, deadline - Date.now());
+  await Promise.race([
+    Promise.all(taskStarts.map((s) => s.promise)),
+    new Promise<void>((resolve) => setTimeout(resolve, remainingMs)),
+  ]);
+
+  // Give stragglers a tiny grace period (500ms) — they may finish right at the deadline
+  const graceUntil = Date.now() + 500;
+  while (Date.now() < graceUntil && taskStarts.some((s) => !s.done)) {
+    await new Promise<void>((resolve) => setTimeout(resolve, 100));
+  }
+
+  // Collect results — for any task that hasn't resolved, synthesize a timeout result
+  const results: Array<{ source: string; papers: AcademicPaper[]; success: boolean; error?: string; durationMs: number }> = [];
+  for (const s of taskStarts) {
+    if (s.done && s.result) {
+      results.push(s.result);
+    } else {
+      results.push({
+        source: s.source,
+        papers: [],
+        success: false,
+        error: "Skipped (overall deadline reached)",
+        durationMs: Date.now() - s.startedAt,
+      });
+    }
+  }
 
   // Aggregate per-source: union of papers across all search terms, deduped by source
   const sourceMap = new Map<string, { papers: AcademicPaper[]; success: boolean; error?: string; durationMs: number }>();

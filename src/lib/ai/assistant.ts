@@ -419,21 +419,63 @@ export async function askPaperQuestion(
   pdfUrl: string,
   question: string,
 ): Promise<{ answer: string; confidence: "high" | "medium" | "low" }> {
-  // Lazy-load pdf-parse so it doesn't affect cold-start time of other endpoints
-  const pdfParseModule = await import("pdf-parse");
-  const pdfParse = pdfParseModule.default || pdfParseModule;
+  // Lazy-load unpdf (server-friendly PDF text extraction built on pdfjs-dist).
+  // NOTE: We switched from `pdf-parse` v2 to `unpdf` because pdf-parse v2 requires
+  // a pdfjs-dist worker module that Next.js's Turbopack cannot resolve in dev mode
+  // (error: "Setting up fake worker failed: Cannot find module 'pdf.worker.mjs'").
+  // `unpdf` is specifically designed for serverless / Node.js environments and
+  // handles the worker setup internally.
+  console.log("[askPaperQuestion] step 1: importing unpdf...");
+  let extractText: (data: ArrayBuffer | Uint8Array, options?: { mergePages?: boolean }) => Promise<{ totalPages: number; text: string | string[] }>;
+  try {
+    const mod = await import("unpdf");
+    extractText = mod.extractText as typeof extractText;
+    console.log("[askPaperQuestion] unpdf imported OK");
+  } catch (importErr) {
+    console.error("[askPaperQuestion] unpdf import FAILED:", importErr);
+    return {
+      answer: "The PDF text extraction library failed to load. Please try again later.",
+      confidence: "low",
+    };
+  }
 
   // Step 1: Fetch the PDF
-  const res = await fetch(pdfUrl, { redirect: "follow" });
+  console.log("[askPaperQuestion] step 2: fetching PDF from", pdfUrl);
+  let res: Response;
+  try {
+    res = await fetch(pdfUrl, { redirect: "follow" });
+  } catch (fetchErr) {
+    console.error("[askPaperQuestion] PDF fetch FAILED:", fetchErr);
+    return {
+      answer: `Failed to download the PDF: ${fetchErr instanceof Error ? fetchErr.message : "network error"}. The paper's PDF link may be behind a paywall or temporarily unavailable.`,
+      confidence: "low",
+    };
+  }
   if (!res.ok) {
-    throw new Error(`Failed to fetch PDF: HTTP ${res.status}`);
+    console.error("[askPaperQuestion] PDF fetch returned HTTP", res.status);
+    return {
+      answer: `Failed to download the PDF (HTTP ${res.status}). The paper's PDF may be behind a paywall or require institutional access.`,
+      confidence: "low",
+    };
   }
   const arrayBuffer = await res.arrayBuffer();
-  const buffer = Buffer.from(arrayBuffer);
+  console.log("[askPaperQuestion] fetched PDF:", arrayBuffer.byteLength, "bytes");
 
-  // Step 2: Extract text
-  const data = await pdfParse(buffer);
-  const fullText = (data.text || "").trim();
+  // Step 2: Extract text using unpdf
+  let fullText = "";
+  try {
+    console.log("[askPaperQuestion] step 3: extracting text with unpdf...");
+    const result = await extractText(arrayBuffer, { mergePages: true });
+    fullText = (Array.isArray(result.text) ? result.text.join("\n\n") : result.text).trim();
+    console.log("[askPaperQuestion] extraction OK, text length:", fullText.length, "totalPages:", result.totalPages);
+  } catch (parseErr) {
+    console.error("[askPaperQuestion] PDF text extraction failed:", parseErr);
+    return {
+      answer: "Failed to extract text from this PDF. It may be a scanned image, encrypted, or in an unsupported format.",
+      confidence: "low",
+    };
+  }
+
   if (!fullText || fullText.length < 50) {
     return {
       answer: "The PDF appears to contain no extractable text (it may be a scanned image). Q&A is not available for this paper.",
