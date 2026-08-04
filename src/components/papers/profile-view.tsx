@@ -18,6 +18,9 @@ import {
   Plus,
   X,
   Lightbulb,
+  Bell,
+  Trash2,
+  Heart,
 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
@@ -48,9 +51,18 @@ interface RecentSearch {
   resultCount: number | null;
 }
 
+interface AlertRecord {
+  id: string;
+  query: string;
+  frequency: "daily" | "weekly";
+  createdAt: string;
+  lastRunAt: string | null;
+}
+
 export function ProfileView() {
   const setView = useAppStore((s) => s.setView);
   const setRawQuery = useAppStore((s) => s.setRawQuery);
+  const setSelectedAuthorName = useAppStore((s) => s.setSelectedAuthorName);
   const [data, setData] = useState<ProfileData | null>(null);
   const [exports, setExports] = useState<ExportRecord[]>([]);
   const [recentSearches, setRecentSearches] = useState<RecentSearch[]>([]);
@@ -60,12 +72,16 @@ export function ProfileView() {
   const [form, setForm] = useState({ name: "", affiliation: "", researchInterests: "" });
   const [savingProfile, setSavingProfile] = useState(false);
   const [newFav, setNewFav] = useState("");
+  // V2: Alerts + followed authors state
+  const [alerts, setAlerts] = useState<AlertRecord[]>([]);
+  const [followedAuthors, setFollowedAuthors] = useState<string[]>([]);
 
   const loadAll = async () => {
-    const [profileRes, exportsRes, historyRes] = await Promise.all([
+    const [profileRes, exportsRes, historyRes, alertsRes] = await Promise.all([
       fetch("/api/profile"),
       fetch("/api/exports"),
       fetch("/api/history"),
+      fetch("/api/alerts"),
     ]);
     const profileData = await profileRes.json();
     setData(profileData);
@@ -76,6 +92,9 @@ export function ProfileView() {
     });
     setExports((await exportsRes.json()).exports || []);
     setRecentSearches((await historyRes.json()).history || []);
+    setAlerts((await alertsRes.json()).alerts || []);
+    // V2: followedAuthors is now exposed by /api/profile
+    setFollowedAuthors(profileData.followedAuthors || []);
   };
 
   useEffect(() => {
@@ -315,6 +334,80 @@ export function ProfileView() {
               ))}
             </div>
           )}
+        </Card>
+      )}
+
+      {/* V2: Search Alerts */}
+      <Card className="p-5">
+        <h2 className="font-semibold mb-3 flex items-center gap-2">
+          <Bell className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
+          Search Alerts
+          {alerts.length > 0 && <Badge variant="secondary" className="text-xs">{alerts.length}</Badge>}
+        </h2>
+        {alerts.length === 0 ? (
+          <p className="text-sm text-muted-foreground">
+            No alerts yet. Run a search and click &quot;Alert me&quot; on the results page to get notified when new papers match.
+          </p>
+        ) : (
+          <ul className="space-y-1.5">
+            {alerts.map((a) => (
+              <li
+                key={a.id}
+                className="flex items-center justify-between gap-2 rounded-md border border-border bg-background px-3 py-2 text-sm"
+              >
+                <div className="flex-1 min-w-0">
+                  <div className="truncate">{a.query}</div>
+                  <div className="text-xs text-muted-foreground flex items-center gap-2 mt-0.5">
+                    <Badge variant="outline" className="text-xs">{a.frequency}</Badge>
+                    {a.lastRunAt && (
+                      <span>Last run: {new Date(a.lastRunAt).toLocaleDateString()}</span>
+                    )}
+                  </div>
+                </div>
+                <button
+                  onClick={async () => {
+                    try {
+                      await fetch(`/api/alerts?id=${a.id}`, { method: "DELETE" });
+                      setAlerts(alerts.filter((x) => x.id !== a.id));
+                      toast.success("Alert deleted");
+                    } catch {
+                      toast.error("Failed to delete alert");
+                    }
+                  }}
+                  className="text-muted-foreground hover:text-red-600 shrink-0"
+                  title="Delete alert"
+                >
+                  <Trash2 className="h-3.5 w-3.5" />
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
+      </Card>
+
+      {/* V2: Followed Authors */}
+      {followedAuthors.length > 0 && (
+        <Card className="p-5">
+          <h2 className="font-semibold mb-3 flex items-center gap-2">
+            <Heart className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
+            Followed Authors
+            <Badge variant="secondary" className="text-xs">{followedAuthors.length}</Badge>
+          </h2>
+          <div className="flex flex-wrap gap-1.5">
+            {followedAuthors.map((name) => (
+              <button
+                key={name}
+                onClick={() => {
+                  setSelectedAuthorName(name);
+                  setView("author");
+                }}
+                className="inline-flex items-center gap-1.5 rounded-full border border-emerald-500/30 bg-emerald-500/5 px-3 py-1 text-sm text-emerald-700 dark:text-emerald-300 hover:bg-emerald-500/10"
+              >
+                <Heart className="h-3 w-3 fill-current" />
+                {name}
+              </button>
+            ))}
+          </div>
         </Card>
       )}
 

@@ -1,7 +1,23 @@
 import { create } from "zustand";
-import type { AcademicPaper, AIUnderstoodQuery, SearchFilters, SourceResult } from "@/lib/academic/types";
+import type {
+  AcademicPaper,
+  AIUnderstoodQuery,
+  EvidenceSynthesis,
+  NetworkGraph,
+  SearchFilters,
+  SourceResult,
+} from "@/lib/academic/types";
+import type { Collection, SearchAlert } from "@/lib/academic/types";
 
-export type ViewName = "home" | "results" | "details" | "compare" | "library" | "profile";
+export type ViewName =
+  | "home"
+  | "results"
+  | "details"
+  | "compare"
+  | "library"
+  | "profile"
+  | "network"  // V2 — Visual Paper Network
+  | "author";  // V2 — Author Profile
 
 interface AppState {
   // Navigation
@@ -30,6 +46,12 @@ interface AppState {
   duplicatesRemoved: number;
   setDuplicatesRemoved: (n: number) => void;
 
+  // V2 — AI Synthesis
+  synthesis: EvidenceSynthesis | null;
+  setSynthesis: (s: EvidenceSynthesis | null) => void;
+  isSynthesizing: boolean;
+  setIsSynthesizing: (b: boolean) => void;
+
   // Paper details
   selectedPaper: AcademicPaper | null;
   setSelectedPaper: (p: AcademicPaper | null) => void;
@@ -45,7 +67,31 @@ interface AppState {
   addSaved: (id: string) => void;
   removeSaved: (id: string) => void;
 
-  // Theme
+  // V2 — Collections
+  collections: Collection[];
+  setCollections: (c: Collection[]) => void;
+  activeCollectionId: string | null;
+  setActiveCollectionId: (id: string | null) => void;
+
+  // V2 — Search Alerts
+  alerts: SearchAlert[];
+  setAlerts: (a: SearchAlert[]) => void;
+  alertModalOpen: boolean;
+  setAlertModalOpen: (b: boolean) => void;
+
+  // V2 — Network View
+  networkGraph: NetworkGraph | null;
+  setNetworkGraph: (g: NetworkGraph | null) => void;
+  selectedNetworkNodeId: string | null;
+  setSelectedNetworkNodeId: (id: string | null) => void;
+  isNetworkLoading: boolean;
+  setIsNetworkLoading: (b: boolean) => void;
+
+  // V2 — Author Profile
+  selectedAuthorName: string | null;
+  setSelectedAuthorName: (n: string | null) => void;
+
+  // Theme (V2: default is dark)
   theme: "light" | "dark";
   toggleTheme: () => void;
   setTheme: (t: "light" | "dark") => void;
@@ -82,6 +128,12 @@ export const useAppStore = create<AppState>((set) => ({
   duplicatesRemoved: 0,
   setDuplicatesRemoved: (n) => set({ duplicatesRemoved: n }),
 
+  // V2 — Synthesis
+  synthesis: null,
+  setSynthesis: (s) => set({ synthesis: s }),
+  isSynthesizing: false,
+  setIsSynthesizing: (b) => set({ isSynthesizing: b }),
+
   selectedPaper: null,
   setSelectedPaper: (p) => set({ selectedPaper: p }),
 
@@ -110,7 +162,32 @@ export const useAppStore = create<AppState>((set) => ({
       return { savedIds: next };
     }),
 
-  theme: "light",
+  // V2 — Collections
+  collections: [],
+  setCollections: (c) => set({ collections: c }),
+  activeCollectionId: null,
+  setActiveCollectionId: (id) => set({ activeCollectionId: id }),
+
+  // V2 — Alerts
+  alerts: [],
+  setAlerts: (a) => set({ alerts: a }),
+  alertModalOpen: false,
+  setAlertModalOpen: (b) => set({ alertModalOpen: b }),
+
+  // V2 — Network
+  networkGraph: null,
+  setNetworkGraph: (g) => set({ networkGraph: g }),
+  selectedNetworkNodeId: null,
+  setSelectedNetworkNodeId: (id) => set({ selectedNetworkNodeId: id }),
+  isNetworkLoading: false,
+  setIsNetworkLoading: (b) => set({ isNetworkLoading: b }),
+
+  // V2 — Author
+  selectedAuthorName: null,
+  setSelectedAuthorName: (n) => set({ selectedAuthorName: n }),
+
+  // V2 — Dark theme is default
+  theme: "dark",
   toggleTheme: () => set((s) => ({ theme: s.theme === "light" ? "dark" : "light" })),
   setTheme: (t) => set({ theme: t }),
 

@@ -4,6 +4,7 @@ import { useAppStore } from "@/store/app-store";
 import { PaperCard } from "@/components/papers/paper-card";
 import { FiltersPanel } from "@/components/papers/filters-panel";
 import { SearchBar } from "@/components/papers/search-bar";
+import { AISynthesisCard } from "@/components/papers/ai-synthesis-card";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -19,6 +20,7 @@ import {
   Layers,
   Sparkles,
   ArrowUpDown,
+  Bell,
 } from "lucide-react";
 import { useState, useMemo } from "react";
 import { runSearch } from "@/lib/actions";
@@ -34,6 +36,7 @@ export function ResultsView() {
   const duplicatesRemoved = useAppStore((s) => s.duplicatesRemoved);
   const rawQuery = useAppStore((s) => s.rawQuery);
   const filters = useAppStore((s) => s.filters);
+  const setAlertModalOpen = useAppStore((s) => s.setAlertModalOpen);
   const [showFilters, setShowFilters] = useState(false);
   const [sortBy, setSortBy] = useState<SortKey>("relevance");
 
@@ -55,6 +58,12 @@ export function ResultsView() {
     return copy;
   }, [papers, sortBy]);
 
+  // V2: Compute max citations in results for percentile badges
+  const maxCitationsInResults = useMemo(
+    () => papers.reduce((max, p) => Math.max(max, p.citationCount), 0),
+    [papers],
+  );
+
   if (isSearching) {
     return <ResultsLoading />;
   }
@@ -74,11 +83,28 @@ export function ResultsView() {
     );
   }
 
+  const successfulSources = sourceResults.filter((s) => s.success).length;
+
   return (
     <div className="mx-auto max-w-7xl px-4 sm:px-6 py-6">
       {/* Top search bar */}
       <div className="mb-4">
-        <SearchBar />
+        <div className="flex items-center gap-2">
+          <div className="flex-1">
+            <SearchBar />
+          </div>
+          {/* V2: Alert me button */}
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setAlertModalOpen(true)}
+            className="gap-1.5 shrink-0"
+            title="Get notified when new papers match this search"
+          >
+            <Bell className="h-4 w-4" />
+            <span className="hidden sm:inline">Alert me</span>
+          </Button>
+        </div>
       </div>
 
       {/* AI understanding summary */}
@@ -112,6 +138,18 @@ export function ResultsView() {
           </div>
         </Card>
       )}
+
+      {/* V2: AI Synthesis card (collapsible, fire-and-forget) */}
+      <AISynthesisCard />
+
+      {/* V2: Results summary strip */}
+      <div className="flex items-center justify-between text-xs text-muted-foreground py-2 mb-3 border-b border-border">
+        <span>
+          Found <strong className="text-foreground">{papers.length}</strong> papers across{" "}
+          <strong className="text-foreground">{successfulSources}</strong> sources ·{" "}
+          {duplicatesRemoved} duplicates removed · {(searchDurationMs / 1000).toFixed(1)}s
+        </span>
+      </div>
 
       {/* Source status bar */}
       <div className="mb-4 flex flex-wrap items-center gap-2">
@@ -210,7 +248,12 @@ export function ResultsView() {
           ) : (
             <div className="space-y-3">
               {sortedPapers.map((p) => (
-                <PaperCard key={p.id} paper={p} />
+                <PaperCard
+                  key={p.id}
+                  paper={p}
+                  maxCitationsInResults={maxCitationsInResults}
+                  totalInResults={papers.length}
+                />
               ))}
             </div>
           )}
@@ -227,7 +270,7 @@ function ResultsLoading() {
         <Loader2 className="h-10 w-10 mx-auto text-emerald-600 dark:text-emerald-400 animate-spin mb-3" />
         <h2 className="font-semibold mb-1">Searching across academic sources…</h2>
         <p className="text-sm text-muted-foreground">
-          Querying Semantic Scholar, arXiv, Crossref, and PubMed in parallel.
+          Querying Semantic Scholar, arXiv, Crossref, PubMed, OpenAlex, IEEE, bioRxiv, medRxiv &amp; Europe PMC in parallel.
         </p>
       </Card>
       <div className="space-y-3">

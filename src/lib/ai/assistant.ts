@@ -1,5 +1,5 @@
 import ZAI from "z-ai-web-dev-sdk";
-import type { AIUnderstoodQuery, PaperInsights, SearchFilters } from "../academic/types";
+import type { AIUnderstoodQuery, EvidenceSynthesis, PaperInsights, SearchFilters, AcademicPaper, AuthorProfile, CitationGraph, CitationNeighbor } from "../academic/types";
 
 let zaiInstance: ZAI | null = null;
 
@@ -295,5 +295,405 @@ function fallbackInsights(title: string, abstract: string): PaperInsights {
     limitations: ["See full paper for discussion of limitations."],
     futureScope: ["See full paper for future work section."],
     keywords: extractKeywordsHeuristic(title + " " + abstract),
+  };
+}
+
+// ──────────────────────────────────────────────────────────────────────────
+// V2 — AI Evidence Synthesis
+// ──────────────────────────────────────────────────────────────────────────
+
+/**
+ * V2 — Synthesize the current state of research across multiple papers.
+ * Returns a structured analysis: overview, consensus, contradictions, gaps,
+ * methodologies, key findings, and suggested follow-up searches.
+ */
+export async function synthesizeEvidence(
+  papers: AcademicPaper[],
+  query: string,
+): Promise<EvidenceSynthesis> {
+  if (papers.length === 0) {
+    return {
+      summary: "No papers found for this query yet.",
+      consensus: "",
+      contradictions: "",
+      researchGaps: [],
+      methodologies: [],
+      keyFindings: [],
+      suggestedQueries: [],
+    };
+  }
+
+  const zai = await getZAI();
+
+  const systemPrompt = `You are an expert academic research synthesizer. Given a list of paper titles and abstracts, synthesize the current state of research. Return ONLY valid JSON (no markdown, no fences) matching this schema:
+
+{
+  "summary": "3-5 sentence overview of what the research collectively shows",
+  "consensus": "What most papers agree on (1-3 sentences)",
+  "contradictions": "Where papers disagree or where evidence is mixed (1-3 sentences)",
+  "researchGaps": ["2-3 identified gaps in the literature"],
+  "methodologies": ["3-5 common approaches or methods found across papers"],
+  "keyFindings": ["3-5 bullet-point findings, each with concrete takeaways"],
+  "suggestedQueries": ["3 follow-up search queries a researcher might run next"]
+}
+
+Be specific and cite paper titles where useful. If there's not enough information to fill a field honestly, use an empty string or empty array.`;
+
+  const topPapers = papers.slice(0, 10);
+  const papersText = topPapers
+    .map((p, i) => `PAPER ${i + 1}
+TITLE: ${p.title}
+ABSTRACT: ${p.abstract}
+YEAR: ${p.year || "unknown"}
+CITATIONS: ${p.citationCount}`)
+    .join("\n---\n");
+
+  const userPrompt = `Research query: ${query}
+
+Top ${topPapers.length} papers found:
+
+${papersText}
+
+Synthesize the state of research and return the JSON.`;
+
+  try {
+    const completion = await zai.chat.completions.create({
+      messages: [
+        { role: "system", content: systemPrompt },
+        { role: "user", content: userPrompt },
+      ],
+      temperature: 0.4,
+    });
+
+    const content = extractContent(completion);
+    const parsed = parseJsonLoose(content);
+
+    if (!parsed) {
+      return fallbackSynthesis(papers, query);
+    }
+
+    return {
+      summary: parsed.summary || `Found ${papers.length} papers related to: ${query}.`,
+      consensus: parsed.consensus || "",
+      contradictions: parsed.contradictions || "",
+      researchGaps: Array.isArray(parsed.researchGaps) ? parsed.researchGaps : [],
+      methodologies: Array.isArray(parsed.methodologies) ? parsed.methodologies : [],
+      keyFindings: Array.isArray(parsed.keyFindings) ? parsed.keyFindings : [],
+      suggestedQueries: Array.isArray(parsed.suggestedQueries) ? parsed.suggestedQueries : [],
+    };
+  } catch (err) {
+    console.error("[AI] synthesizeEvidence failed:", err);
+    return fallbackSynthesis(papers, query);
+  }
+}
+
+function fallbackSynthesis(papers: AcademicPaper[], query: string): EvidenceSynthesis {
+  return {
+    summary: `Found ${papers.length} papers related to: ${query}. The top-cited paper is "${papers[0]?.title || "(none)"}" with ${papers[0]?.citationCount || 0} citations.`,
+    consensus: "AI synthesis unavailable — see individual paper insights for details.",
+    contradictions: "",
+    researchGaps: [],
+    methodologies: [],
+    keyFindings: papers.slice(0, 3).map((p) => `"${p.title}" (${p.year || "n.d."}) — ${p.citationCount} citations.`),
+    suggestedQueries: [],
+  };
+}
+
+// ──────────────────────────────────────────────────────────────────────────
+// V2 — PDF Full-Text Q&A
+// ──────────────────────────────────────────────────────────────────────────
+
+/**
+ * V2 — Answer a question about a paper by extracting text from its PDF
+ * and passing the most relevant chunks to the LLM.
+ *
+ * Implementation:
+ *   1. Fetch the PDF from pdfUrl (server-side fetch).
+ *   2. Extract text using pdf-parse.
+ *   3. Chunk the text into ~2000-token segments.
+ *   4. Find the chunks most relevant to the question (simple keyword overlap).
+ *   5. Pass the top chunks + question to the LLM with a strict prompt.
+ *   6. Return the answer + a confidence indicator.
+ */
+export async function askPaperQuestion(
+  pdfUrl: string,
+  question: string,
+): Promise<{ answer: string; confidence: "high" | "medium" | "low" }> {
+  // Lazy-load pdf-parse so it doesn't affect cold-start time of other endpoints
+  const pdfParseModule = await import("pdf-parse");
+  const pdfParse = pdfParseModule.default || pdfParseModule;
+
+  // Step 1: Fetch the PDF
+  const res = await fetch(pdfUrl, { redirect: "follow" });
+  if (!res.ok) {
+    throw new Error(`Failed to fetch PDF: HTTP ${res.status}`);
+  }
+  const arrayBuffer = await res.arrayBuffer();
+  const buffer = Buffer.from(arrayBuffer);
+
+  // Step 2: Extract text
+  const data = await pdfParse(buffer);
+  const fullText = (data.text || "").trim();
+  if (!fullText || fullText.length < 50) {
+    return {
+      answer: "The PDF appears to contain no extractable text (it may be a scanned image). Q&A is not available for this paper.",
+      confidence: "low",
+    };
+  }
+
+  // Step 3: Chunk into ~2000-token segments (approximated as 8000 chars)
+  const CHUNK_SIZE = 8000;
+  const chunks: string[] = [];
+  for (let i = 0; i < fullText.length; i += CHUNK_SIZE) {
+    chunks.push(fullText.slice(i, i + CHUNK_SIZE));
+  }
+
+  // Step 4: Find the chunks most relevant to the question
+  const questionWords = question.toLowerCase().match(/[a-z][a-z0-9-]{2,}/g) || [];
+  const scored = chunks.map((chunk) => {
+    const lower = chunk.toLowerCase();
+    let score = 0;
+    for (const w of questionWords) {
+      const matches = lower.split(w).length - 1;
+      score += matches;
+    }
+    return { chunk, score };
+  });
+  scored.sort((a, b) => b.score - a.score);
+  const topChunks = scored.slice(0, 3).map((s) => s.chunk);
+
+  // Step 5: Ask the LLM
+  const zai = await getZAI();
+  const systemPrompt = `You are an expert research assistant answering questions about an academic paper. You will be given chunks of text extracted from the paper's PDF. Use ONLY this text to answer the question.
+
+Rules:
+- If the answer is clearly stated in the text, quote or paraphrase it accurately.
+- If the answer is partially supported, say what the text says and what it doesn't.
+- If the answer is not in the provided text, say "The paper does not appear to address this question in the available sections." Do not speculate.
+- Cite specific phrases from the text where useful.
+- Be concise but complete.`;
+
+  const userPrompt = `Question: ${question}
+
+Paper text (chunks):
+${topChunks.map((c, i) => `--- CHUNK ${i + 1} ---\n${c}`).join("\n\n")}
+
+Answer the question based on the text above.`;
+
+  try {
+    const completion = await zai.chat.completions.create({
+      messages: [
+        { role: "system", content: systemPrompt },
+        { role: "user", content: userPrompt },
+      ],
+      temperature: 0.2,
+    });
+
+    const answer = extractContent(completion).trim() || "Unable to generate an answer.";
+    // Confidence heuristic: high if question words appear in chunks, low if not
+    const totalScore = scored[0]?.score || 0;
+    const confidence: "high" | "medium" | "low" =
+      totalScore > 10 ? "high" : totalScore > 3 ? "medium" : "low";
+
+    return { answer, confidence };
+  } catch (err) {
+    console.error("[AI] askPaperQuestion failed:", err);
+    return {
+      answer: "Failed to generate an answer due to an AI service error. Please try again later.",
+      confidence: "low",
+    };
+  }
+}
+
+// ──────────────────────────────────────────────────────────────────────────
+// V2 — Citation Graph (References & Citations via Semantic Scholar)
+// ──────────────────────────────────────────────────────────────────────────
+
+/**
+ * V2 — Fetch the references or citations of a paper using its Semantic Scholar paper ID.
+ * Falls back to a title-based lookup if the paperId is not a Semantic Scholar ID.
+ */
+export async function fetchCitationGraph(
+  paperId: string,
+  paperTitle: string,
+  type: "refs" | "cites",
+): Promise<CitationGraph | { refsOrCites: CitationNeighbor[]; type: "refs" | "cites" }> {
+  // Try to use paperId directly; if it's not an S2 ID, look it up by title.
+  let s2Id = paperId;
+  if (!paperId.match(/^[0-9a-fA-F]{40}$/)) {
+    // Not a Semantic Scholar paperId — look up by title.
+    s2Id = await lookupS2IdByTitle(paperTitle);
+    if (!s2Id) {
+      return { references: [], citations: [] };
+    }
+  }
+
+  const endpoint = type === "refs" ? "references" : "citations";
+  const url = `https://api.semanticscholar.org/graph/v1/paper/${s2Id}/${endpoint}?fields=title,authors,year,citationCount,abstract,externalIds,openAccessPdf,venue&limit=20`;
+
+  const res = await fetch(url, {
+    headers: { Accept: "application/json" },
+  });
+
+  if (!res.ok) {
+    if (res.status === 429) {
+      console.warn("[citation graph] Semantic Scholar rate-limited, returning empty.");
+      return { references: [], citations: [] };
+    }
+    return { references: [], citations: [] };
+  }
+
+  const json = (await res.json()) as {
+    data?: Array<{
+      paper?: {
+        paperId?: string;
+        title?: string;
+        authors?: { name?: string }[];
+        year?: number;
+        citationCount?: number;
+        abstract?: string;
+        externalIds?: { DOI?: string };
+        openAccessPdf?: { url?: string };
+        venue?: string;
+      };
+      // For /citations, the actual paper is nested under "citingPaper"
+      citingPaper?: {
+        paperId?: string;
+        title?: string;
+        authors?: { name?: string }[];
+        year?: number;
+        citationCount?: number;
+        abstract?: string;
+        externalIds?: { DOI?: string };
+        openAccessPdf?: { url?: string };
+        venue?: string;
+      };
+    }>;
+  };
+
+  const data = json.data || [];
+  const neighbors: CitationNeighbor[] = data
+    .map((entry) => {
+      const p = entry.paper || entry.citingPaper;
+      if (!p || !p.title) return null;
+      return {
+        paperId: p.paperId || "",
+        title: p.title,
+        authors: (p.authors || []).map((a) => a.name || "").filter(Boolean),
+        year: typeof p.year === "number" ? p.year : null,
+        citationCount: p.citationCount || 0,
+        abstract: p.abstract || "No abstract available.",
+        doi: p.externalIds?.DOI || null,
+        openAccessPdf: p.openAccessPdf?.url || null,
+        venue: p.venue || null,
+      } as CitationNeighbor;
+    })
+    .filter((n): n is CitationNeighbor => n !== null);
+
+  return type === "refs"
+    ? { references: neighbors, citations: [] }
+    : { references: [], citations: neighbors };
+}
+
+async function lookupS2IdByTitle(title: string): Promise<string | null> {
+  const url = new URL("https://api.semanticscholar.org/graph/v1/paper/search");
+  url.searchParams.set("query", title.slice(0, 200));
+  url.searchParams.set("limit", "1");
+  url.searchParams.set("fields", "paperId,title");
+
+  try {
+    const res = await fetch(url, { headers: { Accept: "application/json" } });
+    if (!res.ok) return null;
+    const json = (await res.json()) as { data?: { paperId?: string; title?: string }[] };
+    return json.data?.[0]?.paperId || null;
+  } catch {
+    return null;
+  }
+}
+
+// ──────────────────────────────────────────────────────────────────────────
+// V2 — Author Profile (via Semantic Scholar Author API)
+// ──────────────────────────────────────────────────────────────────────────
+
+/**
+ * V2 — Fetch an author's profile (affiliations, paper count, h-index, recent papers)
+ * using the Semantic Scholar Author Search API.
+ */
+export async function fetchAuthorProfile(name: string): Promise<AuthorProfile> {
+  const url = new URL("https://api.semanticscholar.org/graph/v1/author/search");
+  url.searchParams.set("query", name);
+  url.searchParams.set(
+    "fields",
+    "name,affiliations,paperCount,citationCount,hIndex,papers.title,papers.year,papers.citationCount,papers.abstract,papers.externalIds,papers.openAccessPdf,papers.venue",
+  );
+  url.searchParams.set("limit", "1");
+
+  const res = await fetch(url, { headers: { Accept: "application/json" } });
+  if (!res.ok) {
+    if (res.status === 429) {
+      throw new Error("Semantic Scholar is rate-limiting author searches. Please try again in a minute.");
+    }
+    throw new Error(`Author search failed: HTTP ${res.status}`);
+  }
+
+  const json = (await res.json()) as {
+    data?: Array<{
+      name?: string;
+      authorId?: string;
+      affiliations?: string[];
+      paperCount?: number;
+      citationCount?: number;
+      hIndex?: number;
+      papers?: Array<{
+        title?: string;
+        year?: number;
+        citationCount?: number;
+        abstract?: string;
+        externalIds?: { DOI?: string };
+        openAccessPdf?: { url?: string };
+        venue?: string;
+        paperId?: string;
+      }>;
+    }>;
+  };
+
+  const author = json.data?.[0];
+  if (!author) {
+    return {
+      name,
+      affiliations: [],
+      paperCount: 0,
+      citationCount: 0,
+      hIndex: null,
+      papers: [],
+    };
+  }
+
+  const papers: AcademicPaper[] = (author.papers || []).slice(0, 20).map((p, i) => ({
+    id: p.paperId || `s2-author-${i}`,
+    title: p.title || "Untitled",
+    authors: [author.name || name],
+    abstract: p.abstract || "No abstract available.",
+    year: typeof p.year === "number" ? p.year : null,
+    doi: p.externalIds?.DOI || null,
+    pdfLink: p.openAccessPdf?.url || null,
+    citationCount: p.citationCount || 0,
+    publisher: p.venue || null,
+    sources: ["Semantic Scholar"],
+    sourceUrls: p.paperId ? [{ source: "Semantic Scholar", url: `https://www.semanticscholar.org/paper/${p.paperId}` }] : [],
+    keywords: [],
+    openAccess: !!p.openAccessPdf?.url,
+    paperType: null,
+    venue: p.venue || null,
+  }));
+
+  return {
+    name: author.name || name,
+    authorId: author.authorId,
+    affiliations: author.affiliations || [],
+    paperCount: author.paperCount || 0,
+    citationCount: author.citationCount || 0,
+    hIndex: author.hIndex ?? null,
+    papers,
   };
 }

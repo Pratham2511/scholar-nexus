@@ -32,6 +32,14 @@ export async function GET() {
         affiliation: user?.affiliation,
         researchInterests: user?.researchInterests,
       },
+      // V2: Expose followedAuthors (stored as JSON string)
+      followedAuthors: (() => {
+        try {
+          return JSON.parse(user?.followedAuthors || "[]");
+        } catch {
+          return [];
+        }
+      })(),
       favorites: favorites.map((f) => f.topic),
       stats: { savedCount, searchCount },
     });

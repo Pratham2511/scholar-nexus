@@ -9,6 +9,9 @@ import { DetailsView } from "@/components/papers/details-view";
 import { CompareView } from "@/components/papers/compare-view";
 import { LibraryView } from "@/components/papers/library-view";
 import { ProfileView } from "@/components/papers/profile-view";
+import { NetworkView } from "@/components/papers/network-view";
+import { AuthorView } from "@/components/papers/author-view";
+import { AlertModal } from "@/components/papers/alert-modal";
 import { Toaster as SonnerToaster } from "@/components/ui/sonner";
 import { useEffect } from "react";
 import { fetchSavedPapers, refreshRecentSearches } from "@/lib/actions";
@@ -32,8 +35,11 @@ export default function Page() {
         {view === "compare" && <CompareView />}
         {view === "library" && <LibraryView />}
         {view === "profile" && <ProfileView />}
+        {view === "network" && <NetworkView />}
+        {view === "author" && <AuthorView />}
       </main>
       <Footer />
+      <AlertModal />
       <SonnerToaster richColors position="bottom-right" />
     </div>
   );

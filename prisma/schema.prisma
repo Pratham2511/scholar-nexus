@@ -18,6 +18,7 @@ model UserProfile {
   name        String?
   affiliation String?
   researchInterests String?
+  followedAuthors  String   @default("[]") // JSON array of author names
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
@@ -25,6 +26,9 @@ model UserProfile {
   searchHistory SearchHistory[]
   favoriteTopics FavoriteTopic[]
   exportHistory  ExportRecord[]
+  collections   Collection[]
+  searchAlerts  SearchAlert[]
+  paperQAs      PaperQA[]
 }
 
 model SavedPaper {
@@ -86,4 +90,69 @@ model ExportRecord {
   user        UserProfile @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
+}
+
+// ──────────────────────────────────────────────────────────────────────────
+// V2 MODELS — Collections / Reading Lists
+// ──────────────────────────────────────────────────────────────────────────
+model Collection {
+  id          String   @id @default(cuid())
+  userId      String
+  name        String
+  description String?
+  color       String   @default("#6366f1")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  user        UserProfile @relation(fields: [userId], references: [id], onDelete: Cascade)
+  papers      CollectionPaper[]
+
+  @@index([userId])
+}
+
+model CollectionPaper {
+  id           String     @id @default(cuid())
+  collectionId String
+  paperId      String
+  notes        String?
+  addedAt      DateTime   @default(now())
+
+  collection   Collection @relation(fields: [collectionId], references: [id], onDelete: Cascade)
+
+  @@index([collectionId])
+  @@index([paperId])
+}
+
+// ──────────────────────────────────────────────────────────────────────────
+// V2 MODELS — Search Alerts
+// ──────────────────────────────────────────────────────────────────────────
+model SearchAlert {
+  id          String    @id @default(cuid())
+  userId      String
+  query       String
+  filters     String    @default("{}") // JSON string of SearchFilters
+  frequency   String    @default("weekly") // "daily" | "weekly"
+  lastRunAt   DateTime?
+  createdAt   DateTime  @default(now())
+
+  user        UserProfile @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+// ──────────────────────────────────────────────────────────────────────────
+// V2 MODELS — Paper Q&A Cache (PDF full-text Q&A)
+// ──────────────────────────────────────────────────────────────────────────
+model PaperQA {
+  id        String   @id @default(cuid())
+  userId    String
+  paperId   String
+  question  String
+  answer    String
+  createdAt DateTime @default(now())
+
+  user      UserProfile @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([paperId])
 }

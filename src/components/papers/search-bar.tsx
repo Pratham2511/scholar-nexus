@@ -14,6 +14,14 @@ interface SearchBarProps {
   placeholder?: string;
 }
 
+const TYPEWRITER_EXAMPLES = [
+  "Recent transformer papers with 100+ citations",
+  "Federated learning privacy 2023 no surveys",
+  "CRISPR cancer therapy clinical trials open access",
+  "Quantum error correction IEEE 2024",
+  "Graph neural networks for drug discovery",
+];
+
 export function SearchBar({ hero = false, placeholder }: SearchBarProps) {
   const rawQuery = useAppStore((s) => s.rawQuery);
   const setRawQuery = useAppStore((s) => s.setRawQuery);
@@ -21,9 +29,43 @@ export function SearchBar({ hero = false, placeholder }: SearchBarProps) {
   const [local, setLocal] = useState(rawQuery);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
+  // V2: Typewriter animation for the placeholder
+  const [typedPlaceholder, setTypedPlaceholder] = useState("");
+  const [exampleIdx, setExampleIdx] = useState(0);
+  const [charIdx, setCharIdx] = useState(0);
+  const [isDeleting, setIsDeleting] = useState(false);
+
   useEffect(() => {
     setLocal(rawQuery);
   }, [rawQuery]);
+
+  // Only animate the placeholder if the user hasn't typed anything
+  useEffect(() => {
+    if (!hero || local) return;
+
+    const current = TYPEWRITER_EXAMPLES[exampleIdx];
+    let timeout: ReturnType<typeof setTimeout>;
+
+    if (!isDeleting && charIdx < current.length) {
+      timeout = setTimeout(() => {
+        setTypedPlaceholder(current.slice(0, charIdx + 1));
+        setCharIdx(charIdx + 1);
+      }, 40);
+    } else if (!isDeleting && charIdx === current.length) {
+      // Pause at full word
+      timeout = setTimeout(() => setIsDeleting(true), 2500);
+    } else if (isDeleting && charIdx > 0) {
+      timeout = setTimeout(() => {
+        setTypedPlaceholder(current.slice(0, charIdx - 1));
+        setCharIdx(charIdx - 1);
+      }, 25);
+    } else if (isDeleting && charIdx === 0) {
+      setIsDeleting(false);
+      setExampleIdx((exampleIdx + 1) % TYPEWRITER_EXAMPLES.length);
+    }
+
+    return () => clearTimeout(timeout);
+  }, [hero, local, charIdx, isDeleting, exampleIdx]);
 
   const handleSubmit = useCallback(async () => {
     const q = local.trim();
@@ -40,6 +82,11 @@ export function SearchBar({ hero = false, placeholder }: SearchBarProps) {
   };
 
   if (hero) {
+    // Build the placeholder text: use typed text if user hasn't typed, else static placeholder
+    const dynamicPlaceholder = local
+      ? (placeholder || "Describe what you're researching in natural language…")
+      : `e.g. ${typedPlaceholder}${!isDeleting && charIdx === TYPEWRITER_EXAMPLES[exampleIdx].length ? "" : "│"}`;
+
     return (
       <div className="w-full">
         <div className="relative rounded-2xl border border-border bg-card shadow-lg shadow-emerald-500/5 transition focus-within:border-emerald-500/50 focus-within:ring-2 focus-within:ring-emerald-500/20">
@@ -49,7 +96,7 @@ export function SearchBar({ hero = false, placeholder }: SearchBarProps) {
             value={local}
             onChange={(e) => setLocal(e.target.value)}
             onKeyDown={handleKeyDown}
-            placeholder={placeholder || "Describe what you're researching in natural language…\n\nExample: I need recent papers about blockchain in healthcare with more than 50 citations but no survey papers."}
+            placeholder={dynamicPlaceholder}
             className="min-h-[120px] resize-none border-0 bg-transparent pl-12 pr-32 pt-4 text-base shadow-none focus-visible:ring-0 focus-visible:ring-offset-0"
             disabled={isSearching}
           />

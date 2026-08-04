@@ -9,6 +9,8 @@ import {
   User,
   Moon,
   Sun,
+  Network as NetworkIcon,
+  UserCircle,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -17,6 +19,7 @@ import { useEffect } from "react";
 const NAV_ITEMS = [
   { view: "home" as const, label: "Home", icon: HomeIcon },
   { view: "results" as const, label: "Results", icon: BookOpen },
+  { view: "network" as const, label: "Network", icon: NetworkIcon },
   { view: "compare" as const, label: "Compare", icon: GitCompareArrows },
   { view: "library" as const, label: "Library", icon: Library },
   { view: "profile" as const, label: "Profile", icon: User },
@@ -26,17 +29,35 @@ export function Header() {
   const view = useAppStore((s) => s.view);
   const setView = useAppStore((s) => s.setView);
   const theme = useAppStore((s) => s.theme);
+  const setTheme = useAppStore((s) => s.setTheme);
   const toggleTheme = useAppStore((s) => s.toggleTheme);
   const compareIds = useAppStore((s) => s.compareIds);
   const savedIds = useAppStore((s) => s.savedIds);
 
-  // Apply theme class to <html>
+  // V2: On mount, read the persisted theme from localStorage (default: dark).
+  // The inline script in layout.tsx already applied the class before hydration,
+  // so here we just sync the store with what's on the DOM.
   useEffect(() => {
-    if (theme === "dark") {
+    try {
+      const stored = localStorage.getItem("scholarai-theme") as "light" | "dark" | null;
+      const initial = stored || "dark";
+      setTheme(initial);
+      if (initial === "dark") document.documentElement.classList.add("dark");
+      else document.documentElement.classList.remove("dark");
+    } catch {
       document.documentElement.classList.add("dark");
-    } else {
-      document.documentElement.classList.remove("dark");
     }
+  }, [setTheme]);
+
+  // V2: Persist theme changes to localStorage and apply the class.
+  useEffect(() => {
+    try {
+      localStorage.setItem("scholarai-theme", theme);
+    } catch {
+      /* ignore */
+    }
+    if (theme === "dark") document.documentElement.classList.add("dark");
+    else document.documentElement.classList.remove("dark");
   }, [theme]);
 
   return (

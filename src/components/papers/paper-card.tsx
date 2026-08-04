@@ -5,7 +5,8 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useAppStore } from "@/store/app-store";
 import { toggleSavePaper } from "@/lib/actions";
-import type { AcademicPaper } from "@/lib/academic/types";
+import { SOURCE_BADGE_COLORS, type AcademicPaper } from "@/lib/academic/types";
+import { SaveToCollection } from "@/components/papers/save-to-collection";
 import {
   Bookmark,
   BookmarkCheck,
@@ -19,34 +20,51 @@ import {
   Users,
   Award,
   ChevronRight,
+  TrendingUp,
 } from "lucide-react";
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { toast } from "sonner";
-
-const SOURCE_COLORS: Record<string, string> = {
-  "Semantic Scholar": "bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border-emerald-500/30",
-  "arXiv": "bg-red-500/10 text-red-700 dark:text-red-300 border-red-500/30",
-  "Crossref": "bg-orange-500/10 text-orange-700 dark:text-orange-300 border-orange-500/30",
-  "PubMed": "bg-blue-500/10 text-blue-700 dark:text-blue-300 border-blue-500/30",
-  "CORE": "bg-purple-500/10 text-purple-700 dark:text-purple-300 border-purple-500/30",
-};
 
 interface PaperCardProps {
   paper: AcademicPaper;
   /** When true, render a compact one-line variant. */
   compact?: boolean;
+  /** Optional max citations in current result set — used for percentile badge */
+  maxCitationsInResults?: number;
+  /** Optional total papers in results — used for percentile calculation */
+  totalInResults?: number;
 }
 
-export function PaperCard({ paper, compact = false }: PaperCardProps) {
+export function PaperCard({
+  paper,
+  compact = false,
+  maxCitationsInResults,
+  totalInResults,
+}: PaperCardProps) {
   const setSelectedPaper = useAppStore((s) => s.setSelectedPaper);
   const setView = useAppStore((s) => s.setView);
   const savedIds = useAppStore((s) => s.savedIds);
   const compareIds = useAppStore((s) => s.compareIds);
   const toggleCompare = useAppStore((s) => s.toggleCompare);
+  const setSelectedAuthorName = useAppStore((s) => s.setSelectedAuthorName);
   const [saving, setSaving] = useState(false);
 
   const isSaved = savedIds.has(paper.id);
   const inCompare = compareIds.has(paper.id);
+
+  // V2: Compute citation percentile badge
+  const percentileBadge = useMemo(() => {
+    if (!paper.citationCount || !maxCitationsInResults || !totalInResults || totalInResults < 5) {
+      return null;
+    }
+    // Percentile = % of papers in results with FEWER citations
+    // We can't compute exactly without all papers, so estimate from max
+    const ratio = paper.citationCount / maxCitationsInResults;
+    if (ratio >= 0.9) return { label: "Top 1%", className: "bg-amber-500/10 text-amber-700 dark:text-amber-300 border-amber-500/30" };
+    if (ratio >= 0.7) return { label: "Top 10%", className: "bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border-emerald-500/30" };
+    if (ratio >= 0.4) return { label: "Top 25%", className: "bg-blue-500/10 text-blue-700 dark:text-blue-300 border-blue-500/30" };
+    return null;
+  }, [paper.citationCount, maxCitationsInResults, totalInResults]);
 
   const handleSave = async (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -71,6 +89,14 @@ export function PaperCard({ paper, compact = false }: PaperCardProps) {
     setSelectedPaper(paper);
     setView("details");
   };
+
+  const openAuthor = (name: string) => {
+    setSelectedAuthorName(name);
+    setView("author");
+  };
+
+  const score = paper.relevanceScore;
+  const scoreColor = score === undefined ? "" : score > 70 ? "#22c55e" : score > 40 ? "#eab308" : "#ef4444";
 
   if (compact) {
     return (
@@ -102,7 +128,7 @@ export function PaperCard({ paper, compact = false }: PaperCardProps) {
           {paper.sources.map((src) => (
             <span
               key={src}
-              className={`inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-medium ${SOURCE_COLORS[src] || "bg-muted text-muted-foreground border-border"}`}
+              className={`inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-medium ${SOURCE_BADGE_COLORS[src] || "bg-muted text-muted-foreground border-border"}`}
             >
               {src}
             </span>
@@ -112,11 +138,26 @@ export function PaperCard({ paper, compact = false }: PaperCardProps) {
               Open Access
             </Badge>
           )}
+          {percentileBadge && (
+            <Badge variant="outline" className={`text-xs gap-0.5 ${percentileBadge.className}`}>
+              <TrendingUp className="h-2.5 w-2.5" />
+              {percentileBadge.label}
+            </Badge>
+          )}
         </div>
-        {typeof paper.relevanceScore === "number" && (
-          <div className="shrink-0 flex items-center gap-1 rounded-md bg-emerald-500/10 px-2 py-0.5 text-xs font-semibold text-emerald-700 dark:text-emerald-300">
-            <Sparkles className="h-3 w-3" />
-            {paper.relevanceScore}
+        {/* V2: Relevance score visual bar */}
+        {typeof score === "number" && (
+          <div className="shrink-0 flex items-center gap-2">
+            <div className="h-1.5 rounded-full bg-muted w-16 overflow-hidden">
+              <div
+                className="h-full rounded-full transition-all"
+                style={{
+                  width: `${score}%`,
+                  backgroundColor: scoreColor,
+                }}
+              />
+            </div>
+            <span className="text-xs text-muted-foreground tabular-nums">{score}</span>
           </div>
         )}
       </div>
@@ -129,7 +170,20 @@ export function PaperCard({ paper, compact = false }: PaperCardProps) {
         <div className="flex items-center gap-1.5 text-sm text-muted-foreground mb-2">
           <Users className="h-3.5 w-3.5 shrink-0" />
           <span className="truncate">
-            {paper.authors.slice(0, 4).join(", ")}
+            {paper.authors.slice(0, 4).map((name, i) => (
+              <span key={i}>
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    openAuthor(name);
+                  }}
+                  className="hover:text-emerald-600 dark:hover:text-emerald-400 hover:underline"
+                >
+                  {name}
+                </button>
+                {i < Math.min(paper.authors.length, 4) - 1 && ", "}
+              </span>
+            ))}
             {paper.authors.length > 4 ? ` +${paper.authors.length - 4} more` : ""}
           </span>
         </div>
@@ -207,6 +261,8 @@ export function PaperCard({ paper, compact = false }: PaperCardProps) {
           <GitCompareArrows className="h-3.5 w-3.5" />
           <span className="hidden sm:inline">{inCompare ? "In compare" : "Compare"}</span>
         </Button>
+        {/* V2: Save to collection dropdown */}
+        <SaveToCollection paper={paper} compact />
         {paper.pdfLink && (
           <Button
             size="sm"

@@ -34,12 +34,16 @@ import { toggleSavePaper, fetchPaperInsights } from "@/lib/actions";
 import { toast } from "sonner";
 import type { PaperInsights } from "@/lib/academic/types";
 import { exportCitation, type CitationFormat } from "@/lib/citation";
+import { CitationNetwork } from "@/components/papers/citation-network";
+import { PdfQaChat } from "@/components/papers/pdf-qa-chat";
+import { SaveToCollection } from "@/components/papers/save-to-collection";
 
 export function DetailsView() {
   const selectedPaper = useAppStore((s) => s.selectedPaper);
   const setView = useAppStore((s) => s.setView);
   const savedIds = useAppStore((s) => s.savedIds);
   const rawQuery = useAppStore((s) => s.rawQuery);
+  const setSelectedAuthorName = useAppStore((s) => s.setSelectedAuthorName);
   const [insights, setInsights] = useState<PaperInsights | null>(null);
   const [loadingInsights, setLoadingInsights] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -162,7 +166,20 @@ export function DetailsView() {
           <div className="flex items-start gap-2 text-muted-foreground mb-4">
             <Users className="h-4 w-4 mt-0.5 shrink-0" />
             <span className="text-sm">
-              {p.authors.join(", ")}
+              {p.authors.map((name, i) => (
+                <span key={i}>
+                  <button
+                    onClick={() => {
+                      setSelectedAuthorName(name);
+                      setView("author");
+                    }}
+                    className="hover:text-emerald-600 dark:hover:text-emerald-400 hover:underline"
+                  >
+                    {name}
+                  </button>
+                  {i < p.authors.length - 1 && ", "}
+                </span>
+              ))}
             </span>
           </div>
         )}
@@ -249,6 +266,8 @@ export function DetailsView() {
             <Quote className="h-4 w-4" />
             Cite
           </Button>
+          {/* V2: Save to collection */}
+          <SaveToCollection paper={p} />
         </div>
 
         {/* Citation panel */}
@@ -416,6 +435,14 @@ export function DetailsView() {
           )}
         </div>
       </Card>
+
+      {/* V2: Citation Network (references + citations) */}
+      <CitationNetwork paper={p} />
+
+      {/* V2: PDF Q&A — only shown when an open-access PDF is available */}
+      {p.pdfLink && (
+        <PdfQaChat paperId={p.id} pdfUrl={p.pdfLink} paperTitle={p.title} />
+      )}
     </div>
   );
 }

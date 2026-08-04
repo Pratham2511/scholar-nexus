@@ -95,8 +95,139 @@ export const ACADEMIC_SOURCES = [
   "Semantic Scholar",
   "arXiv",
   "Crossref",
-  "CORE",
   "PubMed",
+  "OpenAlex",
+  "IEEE Xplore",
+  "bioRxiv",
+  "medRxiv",
+  "Europe PMC",
+  "CORE",
 ] as const;
 
 export type AcademicSourceName = (typeof ACADEMIC_SOURCES)[number];
+
+// ──────────────────────────────────────────────────────────────────────────
+// V2 TYPES — Evidence Synthesis
+// ──────────────────────────────────────────────────────────────────────────
+export interface EvidenceSynthesis {
+  summary: string;
+  consensus: string;
+  contradictions: string;
+  researchGaps: string[];
+  methodologies: string[];
+  keyFindings: string[];
+  suggestedQueries: string[];
+}
+
+// ──────────────────────────────────────────────────────────────────────────
+// V2 TYPES — Citation Network (for Visual Paper Network view)
+// ──────────────────────────────────────────────────────────────────────────
+export interface NetworkNode {
+  id: string;
+  title: string;
+  authors: string[];
+  year: number | null;
+  citationCount: number;
+  relevanceScore?: number;
+  doi: string | null;
+  source: string;
+  /** Whether this node was in the original search results or a fetched neighbor */
+  isSeed: boolean;
+}
+
+export interface NetworkEdge {
+  /** ID of the citing paper */
+  source: string;
+  /** ID of the cited paper */
+  target: string;
+}
+
+export interface NetworkGraph {
+  nodes: NetworkNode[];
+  edges: NetworkEdge[];
+}
+
+// ──────────────────────────────────────────────────────────────────────────
+// V2 TYPES — Author Profile
+// ──────────────────────────────────────────────────────────────────────────
+export interface AuthorProfile {
+  name: string;
+  authorId?: string;
+  affiliations: string[];
+  paperCount: number;
+  citationCount: number;
+  hIndex: number | null;
+  papers: AcademicPaper[];
+}
+
+// ──────────────────────────────────────────────────────────────────────────
+// V2 TYPES — Citation Graph (references & citations of a single paper)
+// ──────────────────────────────────────────────────────────────────────────
+export interface CitationNeighbor {
+  paperId: string;
+  title: string;
+  authors: string[];
+  year: number | null;
+  citationCount: number;
+  abstract: string;
+  doi: string | null;
+  openAccessPdf: string | null;
+  venue: string | null;
+}
+
+export interface CitationGraph {
+  references: CitationNeighbor[];
+  citations: CitationNeighbor[];
+}
+
+// ──────────────────────────────────────────────────────────────────────────
+// V2 TYPES — Collections
+// ──────────────────────────────────────────────────────────────────────────
+export interface Collection {
+  id: string;
+  name: string;
+  description: string | null;
+  color: string;
+  paperCount: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+// ──────────────────────────────────────────────────────────────────────────
+// V2 TYPES — Search Alerts
+// ──────────────────────────────────────────────────────────────────────────
+export interface SearchAlert {
+  id: string;
+  query: string;
+  filters: SearchFilters;
+  frequency: "daily" | "weekly";
+  createdAt: string;
+  lastRunAt: string | null;
+}
+
+// ──────────────────────────────────────────────────────────────────────────
+// V2 TYPES — Paper Q&A
+// ──────────────────────────────────────────────────────────────────────────
+export interface PaperQARecord {
+  id: string;
+  paperId: string;
+  question: string;
+  answer: string;
+  createdAt: string;
+}
+
+// ──────────────────────────────────────────────────────────────────────────
+// V2 TYPES — Per-source badge color (UI hint)
+// ──────────────────────────────────────────────────────────────────────────
+export const SOURCE_BADGE_COLORS: Record<string, string> = {
+  "Semantic Scholar": "bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border-emerald-500/30",
+  "arXiv": "bg-red-500/10 text-red-700 dark:text-red-300 border-red-500/30",
+  "Crossref": "bg-orange-500/10 text-orange-700 dark:text-orange-300 border-orange-500/30",
+  "PubMed": "bg-blue-500/10 text-blue-700 dark:text-blue-300 border-blue-500/30",
+  "OpenAlex": "bg-violet-500/10 text-violet-700 dark:text-violet-300 border-violet-500/30",
+  "IEEE Xplore": "bg-cyan-500/10 text-cyan-700 dark:text-cyan-300 border-cyan-500/30",
+  "bioRxiv": "bg-orange-500/10 text-orange-700 dark:text-orange-300 border-orange-500/30",
+  "medRxiv": "bg-teal-500/10 text-teal-700 dark:text-teal-300 border-teal-500/30",
+  "Europe PMC": "bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border-emerald-500/30",
+  "CORE": "bg-purple-500/10 text-purple-700 dark:text-purple-300 border-purple-500/30",
+};

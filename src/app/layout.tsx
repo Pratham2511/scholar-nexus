@@ -38,8 +38,29 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  // V2: Default to dark theme — apply the class on the server so there's no flash.
   return (
-    <html lang="en" suppressHydrationWarning>
+    <html lang="en" className="dark" suppressHydrationWarning>
+      <head>
+        {/* V2: Apply theme before hydration to avoid flash of light theme. */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              (function() {
+                try {
+                  var stored = localStorage.getItem('scholarai-theme');
+                  var theme = stored || 'dark';
+                  var root = document.documentElement;
+                  if (theme === 'dark') root.classList.add('dark');
+                  else root.classList.remove('dark');
+                } catch (e) {
+                  document.documentElement.classList.add('dark');
+                }
+              })();
+            `,
+          }}
+        />
+      </head>
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased bg-background text-foreground`}
       >
