@@ -81,10 +81,11 @@ test
 prompt
 tool-results/
 /skills/
-/scripts/
-/Caddyfile
-/tests/
-/examples/
+/worklog.md
+/upload/
+/mini-services/
+/dev.log
+/dev.out.log
 
 # ────────────────────────────────────────────────────────────────────────────
 # Coverage reports
