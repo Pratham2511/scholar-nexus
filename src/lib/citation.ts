@@ -1,4 +1,4 @@
-import type { AcademicPaper } from "../academic/types";
+import type { AcademicPaper } from "./academic/types";
 
 export type CitationFormat = "APA" | "MLA" | "BibTeX" | "Chicago";
 

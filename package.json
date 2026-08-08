@@ -1,16 +1,29 @@
 {
-  "name": "nextjs_tailwind_shadcn_ts",
-  "version": "0.2.1",
+  "name": "scholar-nexus",
+  "version": "2.0.0",
   "private": true,
+  "description": "AI-powered multi-source academic research assistant. Searches 9 academic APIs in parallel, with AI query understanding, evidence synthesis, citation graphs, and PDF Q&A.",
+  "license": "MIT",
+  "author": "Pratham2511",
+  "homepage": "https://github.com/Pratham2511/scholar-nexus",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Pratham2511/scholar-nexus.git"
+  },
+  "bugs": {
+    "url": "https://github.com/Pratham2511/scholar-nexus/issues"
+  },
   "scripts": {
-    "dev": "next dev -p 3000 2>&1 | tee dev.log",
-    "build": "next build && cp -r .next/static .next/standalone/.next/ && cp -r public .next/standalone/",
-    "start": "NODE_ENV=production bun .next/standalone/server.js 2>&1 | tee server.log",
+    "dev": "next dev -p 3000",
+    "build": "next build",
+    "start": "next start -p 3000",
     "lint": "eslint .",
+    "typecheck": "tsc --noEmit",
     "db:push": "prisma db push --accept-data-loss",
     "db:generate": "prisma generate",
     "db:migrate": "prisma migrate dev",
-    "db:reset": "prisma migrate reset"
+    "db:reset": "prisma migrate reset",
+    "postinstall": "prisma generate"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",
@@ -86,6 +99,7 @@
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
+    "@types/node": "^22",
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "bun-types": "^1.3.4",
@@ -94,5 +108,8 @@
     "tailwindcss": "^4",
     "tw-animate-css": "^1.3.5",
     "typescript": "^5"
+  },
+  "engines": {
+    "node": ">=20.0.0"
   }
 }

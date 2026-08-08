@@ -18,9 +18,17 @@ import {
 } from "lucide-react";
 import { useEffect, useRef, useState, useMemo } from "react";
 import * as d3 from "d3";
-import type { NetworkNode, NetworkEdge, NetworkGraph, AcademicPaper } from "@/lib/academic/types";
+import type { SimulationNodeDatum, SimulationLinkDatum } from "d3";
+import type { NetworkNode, NetworkEdge, NetworkGraph, AcademicPaper, CitationGraph } from "@/lib/academic/types";
 import { toggleSavePaper } from "@/lib/actions";
 import { toast } from "sonner";
+
+/**
+ * D3-extended node type — the same as NetworkNode but with the mutable
+ * x/y/vx/vy fields that d3-force needs to compute the simulation.
+ */
+type SimNode = NetworkNode & SimulationNodeDatum;
+type SimEdge = SimulationLinkDatum<SimNode>;
 
 export function NetworkView() {
   const papers = useAppStore((s) => s.papers);
@@ -73,7 +81,7 @@ export function NetworkView() {
               `/api/citations?paperId=${encodeURIComponent(paper.id)}&title=${encodeURIComponent(paper.title)}&type=refs`,
             );
             if (!res.ok) return;
-            const data = (await res.json()) as { references: NetworkGraph["nodes"] extends never ? never : import("@/lib/academic/types").CitationGraph };
+            const data = (await res.json()) as CitationGraph;
             const refs = data.references || [];
             for (const r of refs.slice(0, 3)) {
               const neighborId = r.paperId || `nb-${r.doi || r.title.slice(0, 40)}`;
@@ -140,27 +148,31 @@ export function NetworkView() {
     svg.call(zoom);
 
     // Force simulation
+    // Cast to SimNode[] — d3-force mutates these objects with x/y/vx/vy during simulation.
+    const simNodes: SimNode[] = networkGraph.nodes as SimNode[];
+    const simEdges: SimEdge[] = networkGraph.edges as unknown as SimEdge[];
+
     const simulation = d3
-      .forceSimulation(networkGraph.nodes)
+      .forceSimulation<SimNode>(simNodes)
       .force(
         "link",
         d3
-          .forceLink<NetworkNode, NetworkEdge>(networkGraph.edges)
+          .forceLink<SimNode, SimEdge>(simEdges)
           .id((d) => d.id)
           .distance(90)
           .strength(0.4),
       )
       .force("charge", d3.forceManyBody().strength(-180))
       .force("center", d3.forceCenter(width / 2, height / 2))
-      .force("collision", d3.forceCollide().radius((d) => size(d.citationCount) + 6));
+      .force("collision", d3.forceCollide<SimNode>().radius((d) => size(d.citationCount) + 6));
 
     // Edges (arrows)
     const link = g
       .append("g")
       .attr("stroke", "currentColor")
       .attr("stroke-opacity", 0.3)
-      .selectAll("line")
-      .data(networkGraph.edges)
+      .selectAll<SVGLineElement, SimEdge>("line")
+      .data(simEdges)
       .join("line")
       .attr("stroke-width", 1.5)
       .attr("marker-end", "url(#arrow)");
@@ -184,11 +196,11 @@ export function NetworkView() {
     // Nodes
     const node = g
       .append("g")
-      .selectAll<SVGGElement, NetworkNode>("g")
-      .data(networkGraph.nodes)
+      .selectAll<SVGGElement, SimNode>("g")
+      .data(simNodes)
       .join("g")
       .attr("cursor", "pointer")
-      .call(drag(simulation) as any);
+      .call(drag(simulation));
 
     node
       .append("circle")
@@ -228,7 +240,7 @@ export function NetworkView() {
     node.on("click", (_event, d) => {
       setSelectedNetworkNodeId(d.id);
       // Re-render selection rings
-      node.selectAll(".selection-ring").attr("opacity", (n: NetworkNode) =>
+      node.selectAll<SVGElement, SimNode>(".selection-ring").attr("opacity", (n) =>
         n.id === d.id ? 1 : 0,
       );
     });
@@ -236,11 +248,11 @@ export function NetworkView() {
     // Tick
     simulation.on("tick", () => {
       link
-        .attr("x1", (d) => (d.source as NetworkNode).x)
-        .attr("y1", (d) => (d.source as NetworkNode).y)
-        .attr("x2", (d) => (d.target as NetworkNode).x)
-        .attr("y2", (d) => (d.target as NetworkNode).y);
-      node.attr("transform", (d) => `translate(${d.x},${d.y})`);
+        .attr("x1", (d) => (d.source as SimNode).x ?? 0)
+        .attr("y1", (d) => (d.source as SimNode).y ?? 0)
+        .attr("x2", (d) => (d.target as SimNode).x ?? 0)
+        .attr("y2", (d) => (d.target as SimNode).y ?? 0);
+      node.attr("transform", (d) => `translate(${d.x ?? 0},${d.y ?? 0})`);
     });
 
     return () => {
@@ -449,7 +461,7 @@ export function NetworkView() {
 }
 
 // D3 drag behavior helper
-function drag(simulation: d3.Simulation<NetworkNode, undefined>) {
+function drag(simulation: d3.Simulation<SimNode, undefined>) {
   function dragstarted(event: any) {
     if (!event.active) simulation.alphaTarget(0.3).restart();
     event.subject.fx = event.subject.x;
@@ -464,5 +476,5 @@ function drag(simulation: d3.Simulation<NetworkNode, undefined>) {
     event.subject.fx = null;
     event.subject.fy = null;
   }
-  return d3.drag().on("start", dragstarted).on("drag", dragged).on("end", dragended);
+  return d3.drag<SVGGElement, SimNode>().on("start", dragstarted).on("drag", dragged).on("end", dragended);
 }

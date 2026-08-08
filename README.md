@@ -1,12 +1,69 @@
-# ScholarAI v2.0 — AI-Powered Multi-Source Research Paper Discovery, Synthesis & Exploration Platform
+# ScholarNexus v2.0 — AI-Powered Multi-Source Research Paper Discovery, Synthesis & Exploration Platform
 
-> Describe your research in plain English. ScholarAI understands your intent, queries **9 academic sources in parallel** (Semantic Scholar, arXiv, Crossref, PubMed, OpenAlex, IEEE Xplore, bioRxiv, medRxiv, Europe PMC), removes duplicates, ranks papers intelligently, generates **AI-powered insights** for every paper, and lets you **explore citation networks visually**, **synthesize evidence** across results, **chat with PDFs**, **organize collections**, **follow authors**, and **subscribe to search alerts**.
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Next.js 16](https://img.shields.io/badge/Next.js-16.1-black?logo=next.js)](https://nextjs.org/)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.x-blue?logo=typescript)](https://www.typescriptlang.org/)
+[![Prisma](https://img.shields.io/badge/Prisma-6.x-2D3748?logo=prisma)](https://www.prisma.io/)
+[![TailwindCSS](https://img.shields.io/badge/Tailwind-4.x-38B2AC?logo=tailwind-css)](https://tailwindcss.com/)
+[![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](CONTRIBUTING.md)
+
+> Describe your research in plain English. ScholarNexus understands your intent, queries **9 academic sources in parallel** (Semantic Scholar, arXiv, Crossref, PubMed, OpenAlex, IEEE Xplore, bioRxiv, medRxiv, Europe PMC), removes duplicates, ranks papers intelligently, generates **AI-powered insights** for every paper, and lets you **explore citation networks visually**, **synthesize evidence** across results, **chat with PDFs**, **organize collections**, **follow authors**, and **subscribe to search alerts**.
+
+---
+
+## Quick Start
+
+```bash
+# 1. Clone & install
+git clone https://github.com/Pratham2511/scholar-nexus.git
+cd scholar-nexus
+bun install                      # or: npm install
+
+# 2. Configure environment
+cp .env.example .env             # edit if you need API keys (IEEE, CORE)
+
+# 3. Initialize database
+bun run db:push                  # creates SQLite schema
+bun run db:generate              # generates Prisma client
+
+# 4. Run!
+bun run dev                      # http://localhost:3000
+```
+
+**Production build:**
+
+```bash
+bun run build
+bun run start                    # NODE_ENV=production
+```
+
+**Requirements:** Node.js ≥ 20, Bun (recommended) or npm.
+
+---
+
+## Security Hardening
+
+This project ships with production-grade security defaults:
+
+| Layer | Protection | Location |
+|-------|-----------|----------|
+| **SSRF guard** | Blocks outbound fetches to loopback, private IPs, and cloud metadata endpoints (`169.254.169.254`) | `src/lib/security.ts` → `validateOutboundUrl()` |
+| **Rate limiting** | Per-IP sliding-window limits on every API route (10–120 req/min depending on cost) | `src/lib/security.ts` → `checkRateLimit()` |
+| **Body size cap** | Rejects payloads > 256 KB (or 1 MB on synthesize) with `413 Payload Too Large` | `src/lib/security.ts` → `readJsonBody()` |
+| **Input sanitization** | All user-supplied strings are length-capped; arrays are size-capped; years/ints are range-checked | `src/lib/security.ts` → `truncate()`, `sanitizeYear()` |
+| **Security headers** | `X-Frame-Options: DENY`, CSP, HSTS, `X-Content-Type-Options: nosniff`, Referrer-Policy, Permissions-Policy | `next.config.ts` → `headers()` |
+| **No `X-Powered-By`** | Header is disabled to avoid server fingerprinting | `next.config.ts` → `poweredByHeader: false` |
+| **Strict mode** | React strict mode enabled; TypeScript strict mode; no `ignoreBuildErrors` | `next.config.ts` + `tsconfig.json` |
+| **No secrets in repo** | `.env` is gitignored; only `.env.example` is committed | `.gitignore` + `.env.example` |
+| **No DB in repo** | `*.db` is gitignored; users run `bun run db:push` to create their own | `.gitignore` |
+
+If you discover a vulnerability, please **do not open a public issue** — see `CONTRIBUTING.md` for the responsible disclosure process.
 
 ---
 
 ## Table of Contents
 
-1. [What Is ScholarAI?](#1-what-is-scholarai)
+1. [What Is ScholarNexus?](#1-what-is-scholarai)
 2. [The Problem We Solve](#2-the-problem-we-solve)
 3. [The Solution — End-to-End Pipeline](#3-the-solution--end-to-end-pipeline)
 4. [Tech Stack](#4-tech-stack)

@@ -2,9 +2,19 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { ensureLocalUser, getLocalUserId } from "@/lib/user";
 import type { AcademicPaper } from "@/lib/academic/types";
+import {
+  checkRateLimit,
+  rateLimitedResponse,
+  readJsonBody,
+  truncate,
+  MAX_TITLE_LENGTH,
+  MAX_ABSTRACT_LENGTH,
+} from "@/lib/security";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
+
+const RATE_LIMIT = { max: 120, windowMs: 60_000 };
 
 interface AddPaperBody {
   collectionId: string;
@@ -17,14 +27,15 @@ interface AddPaperBody {
  * Lists all papers in a collection.
  */
 export async function GET(req: NextRequest) {
+  const rl = checkRateLimit(req, RATE_LIMIT);
+  if (!rl.ok) return rateLimitedResponse(rl);
   try {
     const { searchParams } = new URL(req.url);
     const collectionId = searchParams.get("collectionId");
-    if (!collectionId) {
-      return NextResponse.json({ error: "Missing 'collectionId' query parameter" }, { status: 400 });
+    if (!collectionId || collectionId.length > 100) {
+      return NextResponse.json({ error: "Missing or invalid 'collectionId' query parameter" }, { status: 400 });
     }
     await ensureLocalUser();
-    // Verify the collection belongs to the local user
     const collection = await db.collection.findFirst({
       where: { id: collectionId, userId: getLocalUserId() },
     });
@@ -55,56 +66,71 @@ export async function GET(req: NextRequest) {
  * Body: { collectionId: string, paper: AcademicPaper, notes?: string }
  */
 export async function POST(req: NextRequest) {
+  const rl = checkRateLimit(req, RATE_LIMIT);
+  if (!rl.ok) return rateLimitedResponse(rl);
+
+  const bodyResult = await readJsonBody<AddPaperBody>(req, 512 * 1024);
+  if (!bodyResult.ok) return bodyResult.response;
+  const body = bodyResult.data;
+
+  if (!body.collectionId || typeof body.collectionId !== "string") {
+    return NextResponse.json({ error: "Missing 'collectionId'" }, { status: 400 });
+  }
+  if (!body.paper || !body.paper.title || typeof body.paper.title !== "string") {
+    return NextResponse.json({ error: "Missing or invalid 'paper'" }, { status: 400 });
+  }
+
+  const collectionId = truncate(body.collectionId, 100);
+  const notes = body.notes ? truncate(body.notes, 5000) : null;
+  const p = body.paper;
+
   try {
-    const body = (await req.json()) as AddPaperBody;
-    if (!body.collectionId || !body.paper || !body.paper.title) {
-      return NextResponse.json({ error: "Missing 'collectionId' or 'paper'" }, { status: 400 });
-    }
     await ensureLocalUser();
     const userId = getLocalUserId();
 
     // Verify ownership of the collection
     const collection = await db.collection.findFirst({
-      where: { id: body.collectionId, userId },
+      where: { id: collectionId, userId },
     });
     if (!collection) {
       return NextResponse.json({ error: "Collection not found" }, { status: 404 });
     }
 
     // Save the paper to SavedPaper if not already there (so we have a snapshot)
+    const paperId = truncate(p.id, 500);
     const existing = await db.savedPaper.findFirst({
-      where: { userId, paperId: body.paper.id },
+      where: { userId, paperId },
     });
     if (!existing) {
       await db.savedPaper.create({
         data: {
           userId,
-          paperId: body.paper.id,
-          title: body.paper.title,
-          authors: (body.paper.authors || []).join("|||"),
-          abstract: body.paper.abstract,
-          year: body.paper.year ?? null,
-          doi: body.paper.doi ?? null,
-          pdfLink: body.paper.pdfLink ?? null,
-          citationCount: body.paper.citationCount ?? 0,
-          publisher: body.paper.publisher ?? null,
-          source: (body.paper.sources && body.paper.sources[0]) ?? null,
-          keywords: (body.paper.keywords || []).join("|||"),
-          openAccess: !!body.paper.openAccess,
-          aiSummary: body.paper.aiInsights ? JSON.stringify(body.paper.aiInsights) : null,
+          paperId,
+          title: truncate(p.title, MAX_TITLE_LENGTH),
+          authors: (p.authors || []).slice(0, 50).map((a) => truncate(String(a), 200)).join("|||"),
+          abstract: truncate(p.abstract || "", MAX_ABSTRACT_LENGTH),
+          year: typeof p.year === "number" ? p.year : null,
+          doi: p.doi ? truncate(String(p.doi), 200) : null,
+          pdfLink: p.pdfLink ? truncate(String(p.pdfLink), 2000) : null,
+          citationCount: typeof p.citationCount === "number" ? p.citationCount : 0,
+          publisher: p.publisher ? truncate(String(p.publisher), 300) : null,
+          source: (p.sources && p.sources[0]) ? truncate(String(p.sources[0]), 100) : null,
+          keywords: (p.keywords || []).slice(0, 30).map((k) => truncate(String(k), 100)).join("|||"),
+          openAccess: !!p.openAccess,
+          aiSummary: p.aiInsights ? JSON.stringify(p.aiInsights).slice(0, 32_000) : null,
         },
       });
     }
 
     // Add to collection (idempotent — if already there, just update notes)
     const existingLink = await db.collectionPaper.findFirst({
-      where: { collectionId: body.collectionId, paperId: body.paper.id },
+      where: { collectionId, paperId },
     });
     if (existingLink) {
-      if (body.notes !== undefined) {
+      if (notes !== undefined) {
         await db.collectionPaper.update({
           where: { id: existingLink.id },
-          data: { notes: body.notes },
+          data: { notes },
         });
       }
       return NextResponse.json({ ok: true, alreadyInCollection: true });
@@ -112,15 +138,15 @@ export async function POST(req: NextRequest) {
 
     await db.collectionPaper.create({
       data: {
-        collectionId: body.collectionId,
-        paperId: body.paper.id,
-        notes: body.notes || null,
+        collectionId,
+        paperId,
+        notes,
       },
     });
 
     // Touch the collection's updatedAt
     await db.collection.update({
-      where: { id: body.collectionId },
+      where: { id: collectionId },
       data: { updatedAt: new Date() },
     });
 
@@ -136,15 +162,16 @@ export async function POST(req: NextRequest) {
  * Remove a paper from a collection.
  */
 export async function DELETE(req: NextRequest) {
+  const rl = checkRateLimit(req, RATE_LIMIT);
+  if (!rl.ok) return rateLimitedResponse(rl);
   try {
     const { searchParams } = new URL(req.url);
     const collectionId = searchParams.get("collectionId");
     const paperId = searchParams.get("paperId");
-    if (!collectionId || !paperId) {
-      return NextResponse.json({ error: "Missing 'collectionId' or 'paperId'" }, { status: 400 });
+    if (!collectionId || collectionId.length > 100 || !paperId || paperId.length > 500) {
+      return NextResponse.json({ error: "Missing or invalid 'collectionId' or 'paperId'" }, { status: 400 });
     }
     await ensureLocalUser();
-    // Verify ownership
     const collection = await db.collection.findFirst({
       where: { id: collectionId, userId: getLocalUserId() },
     });

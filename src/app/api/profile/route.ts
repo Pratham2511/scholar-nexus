@@ -1,14 +1,23 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { ensureLocalUser, getLocalUserId } from "@/lib/user";
+import {
+  checkRateLimit,
+  rateLimitedResponse,
+  truncate,
+} from "@/lib/security";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
+const RATE_LIMIT = { max: 120, windowMs: 60_000 };
+
 /**
  * GET /api/profile — return local user profile + favorite topics + stats.
  */
-export async function GET() {
+export async function GET(req: NextRequest) {
+  const rl = checkRateLimit(req, RATE_LIMIT);
+  if (!rl.ok) return rateLimitedResponse(rl);
   try {
     await ensureLocalUser();
     const user = await db.userProfile.findUnique({
@@ -32,7 +41,6 @@ export async function GET() {
         affiliation: user?.affiliation,
         researchInterests: user?.researchInterests,
       },
-      // V2: Expose followedAuthors (stored as JSON string)
       followedAuthors: (() => {
         try {
           return JSON.parse(user?.followedAuthors || "[]");
@@ -53,19 +61,24 @@ export async function GET() {
  * PATCH /api/profile — update the local user profile.
  */
 export async function PATCH(req: NextRequest) {
+  const rl = checkRateLimit(req, RATE_LIMIT);
+  if (!rl.ok) return rateLimitedResponse(rl);
+
+  let body: { name?: string; affiliation?: string; researchInterests?: string };
   try {
-    const body = (await req.json()) as {
-      name?: string;
-      affiliation?: string;
-      researchInterests?: string;
-    };
+    body = await req.json();
+  } catch {
+    return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
+  }
+
+  try {
     await ensureLocalUser();
     const updated = await db.userProfile.update({
       where: { id: getLocalUserId() },
       data: {
-        name: body.name,
-        affiliation: body.affiliation,
-        researchInterests: body.researchInterests,
+        name: body.name != null ? truncate(String(body.name), 200) : undefined,
+        affiliation: body.affiliation != null ? truncate(String(body.affiliation), 300) : undefined,
+        researchInterests: body.researchInterests != null ? truncate(String(body.researchInterests), 2000) : undefined,
       },
     });
     return NextResponse.json({ profile: updated });
@@ -80,23 +93,38 @@ export async function PATCH(req: NextRequest) {
  * Body: { action: "add" | "remove", topic: string }
  */
 export async function PUT(req: NextRequest) {
+  const rl = checkRateLimit(req, RATE_LIMIT);
+  if (!rl.ok) return rateLimitedResponse(rl);
+
+  let body: { action: "add" | "remove"; topic: string };
   try {
-    const body = (await req.json()) as { action: "add" | "remove"; topic: string };
-    if (!body.topic || !body.action) {
-      return NextResponse.json({ error: "Missing 'action' or 'topic'" }, { status: 400 });
-    }
+    body = await req.json();
+  } catch {
+    return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
+  }
+
+  if (!body.topic || typeof body.topic !== "string") {
+    return NextResponse.json({ error: "Missing 'topic'" }, { status: 400 });
+  }
+  if (body.action !== "add" && body.action !== "remove") {
+    return NextResponse.json({ error: "Invalid 'action' — must be 'add' or 'remove'" }, { status: 400 });
+  }
+
+  const topic = truncate(body.topic.trim(), 200);
+
+  try {
     await ensureLocalUser();
     if (body.action === "add") {
       try {
         await db.favoriteTopic.create({
-          data: { userId: getLocalUserId(), topic: body.topic },
+          data: { userId: getLocalUserId(), topic },
         });
       } catch {
         // Already exists — ignore
       }
-    } else if (body.action === "remove") {
+    } else {
       await db.favoriteTopic.deleteMany({
-        where: { userId: getLocalUserId(), topic: body.topic },
+        where: { userId: getLocalUserId(), topic },
       });
     }
     return NextResponse.json({ ok: true });

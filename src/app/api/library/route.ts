@@ -2,14 +2,26 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { ensureLocalUser, getLocalUserId } from "@/lib/user";
 import type { AcademicPaper } from "@/lib/academic/types";
+import {
+  checkRateLimit,
+  rateLimitedResponse,
+  readJsonBody,
+  truncate,
+  MAX_TITLE_LENGTH,
+  MAX_ABSTRACT_LENGTH,
+} from "@/lib/security";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
+const RATE_LIMIT = { max: 120, windowMs: 60_000 }; // 120 / min / IP
+
 /**
  * GET /api/library — list all saved papers for the local user.
  */
-export async function GET() {
+export async function GET(req: NextRequest) {
+  const rl = checkRateLimit(req, RATE_LIMIT);
+  if (!rl.ok) return rateLimitedResponse(rl);
   try {
     await ensureLocalUser();
     const papers = await db.savedPaper.findMany({
@@ -17,7 +29,6 @@ export async function GET() {
       orderBy: { savedAt: "desc" },
     });
 
-    // Convert DB rows back to AcademicPaper shape for the frontend.
     const result = papers.map((p) => ({
       id: p.paperId,
       title: p.title,
@@ -34,7 +45,7 @@ export async function GET() {
       openAccess: p.openAccess,
       paperType: null,
       venue: p.publisher,
-      aiInsights: p.aiSummary ? JSON.parse(p.aiSummary) : undefined,
+      aiInsights: p.aiSummary ? safeParseJSON(p.aiSummary) : undefined,
       savedAt: p.savedAt,
     })) as AcademicPaper[];
 
@@ -45,21 +56,40 @@ export async function GET() {
   }
 }
 
+function safeParseJSON(s: string): unknown {
+  try {
+    return JSON.parse(s);
+  } catch {
+    return undefined;
+  }
+}
+
 /**
  * POST /api/library — save a paper.
  * Body: { paper: AcademicPaper }
  */
 export async function POST(req: NextRequest) {
-  try {
-    const body = (await req.json()) as { paper: AcademicPaper };
-    if (!body.paper || !body.paper.title) {
-      return NextResponse.json({ error: "Missing or invalid 'paper' field" }, { status: 400 });
-    }
+  const rl = checkRateLimit(req, RATE_LIMIT);
+  if (!rl.ok) return rateLimitedResponse(rl);
 
+  const bodyResult = await readJsonBody<{ paper: AcademicPaper }>(req, 512 * 1024);
+  if (!bodyResult.ok) return bodyResult.response;
+  const body = bodyResult.data;
+
+  if (!body.paper || !body.paper.title || typeof body.paper.title !== "string") {
+    return NextResponse.json({ error: "Missing or invalid 'paper' field" }, { status: 400 });
+  }
+
+  // Sanitize paper fields before persisting
+  const p = body.paper;
+  const sanitizedTitle = truncate(p.title, MAX_TITLE_LENGTH);
+  const sanitizedAbstract = truncate(p.abstract || "", MAX_ABSTRACT_LENGTH);
+
+  try {
     await ensureLocalUser();
-    const p = body.paper;
+    const userId = getLocalUserId();
     const existing = await db.savedPaper.findFirst({
-      where: { userId: getLocalUserId(), paperId: p.id },
+      where: { userId, paperId: truncate(p.id, 500) },
     });
     if (existing) {
       return NextResponse.json({ ok: true, alreadySaved: true });
@@ -67,20 +97,20 @@ export async function POST(req: NextRequest) {
 
     await db.savedPaper.create({
       data: {
-        userId: getLocalUserId(),
-        paperId: p.id,
-        title: p.title,
-        authors: (p.authors || []).join("|||"),
-        abstract: p.abstract,
-        year: p.year ?? null,
-        doi: p.doi ?? null,
-        pdfLink: p.pdfLink ?? null,
-        citationCount: p.citationCount ?? 0,
-        publisher: p.publisher ?? null,
-        source: (p.sources && p.sources[0]) ?? null,
-        keywords: (p.keywords || []).join("|||"),
+        userId,
+        paperId: truncate(p.id, 500),
+        title: sanitizedTitle,
+        authors: (p.authors || []).slice(0, 50).map((a) => truncate(String(a), 200)).join("|||"),
+        abstract: sanitizedAbstract,
+        year: typeof p.year === "number" ? p.year : null,
+        doi: p.doi ? truncate(String(p.doi), 200) : null,
+        pdfLink: p.pdfLink ? truncate(String(p.pdfLink), 2000) : null,
+        citationCount: typeof p.citationCount === "number" ? p.citationCount : 0,
+        publisher: p.publisher ? truncate(String(p.publisher), 300) : null,
+        source: (p.sources && p.sources[0]) ? truncate(String(p.sources[0]), 100) : null,
+        keywords: (p.keywords || []).slice(0, 30).map((k) => truncate(String(k), 100)).join("|||"),
         openAccess: !!p.openAccess,
-        aiSummary: p.aiInsights ? JSON.stringify(p.aiInsights) : null,
+        aiSummary: p.aiInsights ? JSON.stringify(p.aiInsights).slice(0, 32_000) : null,
       },
     });
 
@@ -95,11 +125,13 @@ export async function POST(req: NextRequest) {
  * DELETE /api/library?paperId=xxx — remove a saved paper.
  */
 export async function DELETE(req: NextRequest) {
+  const rl = checkRateLimit(req, RATE_LIMIT);
+  if (!rl.ok) return rateLimitedResponse(rl);
   try {
     const { searchParams } = new URL(req.url);
     const paperId = searchParams.get("paperId");
-    if (!paperId) {
-      return NextResponse.json({ error: "Missing 'paperId' query parameter" }, { status: 400 });
+    if (!paperId || paperId.length > 500) {
+      return NextResponse.json({ error: "Missing or invalid 'paperId' query parameter" }, { status: 400 });
     }
 
     await ensureLocalUser();

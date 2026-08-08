@@ -1,7 +1,10 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
+import { checkRateLimit, rateLimitedResponse } from "@/lib/security";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
+
+const RATE_LIMIT = { max: 120, windowMs: 60_000 };
 
 /** Curated list of trending research topics, grouped by domain. */
 const TRENDING = [
@@ -22,6 +25,8 @@ const TRENDING = [
 /**
  * GET /api/trending — returns curated trending research topics.
  */
-export async function GET() {
+export async function GET(req: NextRequest) {
+  const rl = checkRateLimit(req, RATE_LIMIT);
+  if (!rl.ok) return rateLimitedResponse(rl);
   return NextResponse.json({ topics: TRENDING });
 }

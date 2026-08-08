@@ -419,18 +419,33 @@ export async function askPaperQuestion(
   pdfUrl: string,
   question: string,
 ): Promise<{ answer: string; confidence: "high" | "medium" | "low" }> {
+  // SSRF guard — NEVER trust a client-supplied URL without validation.
+  // This prevents the server from being tricked into fetching internal
+  // cloud-metadata endpoints (e.g. AWS 169.254.169.254) or loopback services.
+  const { validateOutboundUrl } = await import("../security");
+  const urlCheck = validateOutboundUrl(pdfUrl);
+  if (!urlCheck.ok || !urlCheck.url) {
+    console.warn("[askPaperQuestion] blocked outbound URL:", urlCheck.reason);
+    return {
+      answer: `The provided PDF URL was blocked for security reasons (${urlCheck.reason}). Only public http(s) URLs are allowed.`,
+      confidence: "low",
+    };
+  }
+  const safeUrl = urlCheck.url.toString();
+
+  // Cap question length to prevent LLM context abuse
+  const safeQuestion = question.slice(0, 2000);
+
   // Lazy-load unpdf (server-friendly PDF text extraction built on pdfjs-dist).
   // NOTE: We switched from `pdf-parse` v2 to `unpdf` because pdf-parse v2 requires
   // a pdfjs-dist worker module that Next.js's Turbopack cannot resolve in dev mode
   // (error: "Setting up fake worker failed: Cannot find module 'pdf.worker.mjs'").
   // `unpdf` is specifically designed for serverless / Node.js environments and
   // handles the worker setup internally.
-  console.log("[askPaperQuestion] step 1: importing unpdf...");
   let extractText: (data: ArrayBuffer | Uint8Array, options?: { mergePages?: boolean }) => Promise<{ totalPages: number; text: string | string[] }>;
   try {
     const mod = await import("unpdf");
     extractText = mod.extractText as typeof extractText;
-    console.log("[askPaperQuestion] unpdf imported OK");
   } catch (importErr) {
     console.error("[askPaperQuestion] unpdf import FAILED:", importErr);
     return {
@@ -439,11 +454,11 @@ export async function askPaperQuestion(
     };
   }
 
-  // Step 1: Fetch the PDF
-  console.log("[askPaperQuestion] step 2: fetching PDF from", pdfUrl);
+  // Step 1: Fetch the PDF (with size cap to prevent memory exhaustion)
+  const MAX_PDF_BYTES = 25 * 1024 * 1024; // 25 MB
   let res: Response;
   try {
-    res = await fetch(pdfUrl, { redirect: "follow" });
+    res = await fetch(safeUrl, { redirect: "follow" });
   } catch (fetchErr) {
     console.error("[askPaperQuestion] PDF fetch FAILED:", fetchErr);
     return {
@@ -458,22 +473,40 @@ export async function askPaperQuestion(
       confidence: "low",
     };
   }
+
+  const contentLength = Number(res.headers.get("content-length") || 0);
+  if (contentLength > MAX_PDF_BYTES) {
+    return {
+      answer: `The PDF is too large to process (${(contentLength / 1024 / 1024).toFixed(1)} MB). Maximum supported size is 25 MB.`,
+      confidence: "low",
+    };
+  }
+
   const arrayBuffer = await res.arrayBuffer();
-  console.log("[askPaperQuestion] fetched PDF:", arrayBuffer.byteLength, "bytes");
+  if (arrayBuffer.byteLength > MAX_PDF_BYTES) {
+    return {
+      answer: `The PDF is too large to process (${(arrayBuffer.byteLength / 1024 / 1024).toFixed(1)} MB). Maximum supported size is 25 MB.`,
+      confidence: "low",
+    };
+  }
 
   // Step 2: Extract text using unpdf
   let fullText = "";
   try {
-    console.log("[askPaperQuestion] step 3: extracting text with unpdf...");
     const result = await extractText(arrayBuffer, { mergePages: true });
     fullText = (Array.isArray(result.text) ? result.text.join("\n\n") : result.text).trim();
-    console.log("[askPaperQuestion] extraction OK, text length:", fullText.length, "totalPages:", result.totalPages);
   } catch (parseErr) {
     console.error("[askPaperQuestion] PDF text extraction failed:", parseErr);
     return {
       answer: "Failed to extract text from this PDF. It may be a scanned image, encrypted, or in an unsupported format.",
       confidence: "low",
     };
+  }
+
+  // Cap full-text length to prevent context overflow (150k chars ≈ ~30k tokens)
+  const MAX_TEXT_CHARS = 150_000;
+  if (fullText.length > MAX_TEXT_CHARS) {
+    fullText = fullText.slice(0, MAX_TEXT_CHARS);
   }
 
   if (!fullText || fullText.length < 50) {
@@ -491,7 +524,7 @@ export async function askPaperQuestion(
   }
 
   // Step 4: Find the chunks most relevant to the question
-  const questionWords = question.toLowerCase().match(/[a-z][a-z0-9-]{2,}/g) || [];
+  const questionWords = safeQuestion.toLowerCase().match(/[a-z][a-z0-9-]{2,}/g) || [];
   const scored = chunks.map((chunk) => {
     const lower = chunk.toLowerCase();
     let score = 0;
@@ -515,7 +548,7 @@ Rules:
 - Cite specific phrases from the text where useful.
 - Be concise but complete.`;
 
-  const userPrompt = `Question: ${question}
+  const userPrompt = `Question: ${safeQuestion}
 
 Paper text (chunks):
 ${topChunks.map((c, i) => `--- CHUNK ${i + 1} ---\n${c}`).join("\n\n")}
@@ -561,7 +594,7 @@ export async function fetchCitationGraph(
   type: "refs" | "cites",
 ): Promise<CitationGraph | { refsOrCites: CitationNeighbor[]; type: "refs" | "cites" }> {
   // Try to use paperId directly; if it's not an S2 ID, look it up by title.
-  let s2Id = paperId;
+  let s2Id: string | null = paperId;
   if (!paperId.match(/^[0-9a-fA-F]{40}$/)) {
     // Not a Semantic Scholar paperId — look up by title.
     s2Id = await lookupS2IdByTitle(paperTitle);

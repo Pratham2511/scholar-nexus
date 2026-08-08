@@ -2,14 +2,25 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { ensureLocalUser, getLocalUserId } from "@/lib/user";
 import type { SearchFilters } from "@/lib/academic/types";
+import {
+  checkRateLimit,
+  rateLimitedResponse,
+  readJsonBody,
+  truncate,
+  MAX_QUERY_LENGTH,
+} from "@/lib/security";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
+const RATE_LIMIT = { max: 60, windowMs: 60_000 };
+
 /**
  * GET /api/alerts — list all search alerts for the local user.
  */
-export async function GET() {
+export async function GET(req: NextRequest) {
+  const rl = checkRateLimit(req, RATE_LIMIT);
+  if (!rl.ok) return rateLimitedResponse(rl);
   try {
     await ensureLocalUser();
     const alerts = await db.searchAlert.findMany({
@@ -20,7 +31,7 @@ export async function GET() {
       alerts: alerts.map((a) => ({
         id: a.id,
         query: a.query,
-        filters: a.filters ? (JSON.parse(a.filters) as SearchFilters) : {},
+        filters: a.filters ? safeJsonParse(a.filters) : {},
         frequency: a.frequency as "daily" | "weekly",
         createdAt: a.createdAt,
         lastRunAt: a.lastRunAt,
@@ -32,28 +43,46 @@ export async function GET() {
   }
 }
 
+function safeJsonParse(s: string): SearchFilters {
+  try {
+    return JSON.parse(s) as SearchFilters;
+  } catch {
+    return {};
+  }
+}
+
 /**
  * POST /api/alerts — create a new search alert.
  * Body: { query: string, filters?: SearchFilters, frequency: "daily" | "weekly" }
  */
 export async function POST(req: NextRequest) {
+  const rl = checkRateLimit(req, RATE_LIMIT);
+  if (!rl.ok) return rateLimitedResponse(rl);
+
+  const bodyResult = await readJsonBody<{
+    query: string;
+    filters?: SearchFilters;
+    frequency: "daily" | "weekly";
+  }>(req);
+  if (!bodyResult.ok) return bodyResult.response;
+  const body = bodyResult.data;
+
+  if (!body.query || typeof body.query !== "string" || body.query.trim().length === 0) {
+    return NextResponse.json({ error: "Missing or invalid 'query'" }, { status: 400 });
+  }
+  if (body.query.length > MAX_QUERY_LENGTH) {
+    return NextResponse.json({ error: `Query too long (max ${MAX_QUERY_LENGTH} chars)` }, { status: 400 });
+  }
+  if (body.frequency !== "daily" && body.frequency !== "weekly") {
+    return NextResponse.json({ error: "Invalid 'frequency' — must be 'daily' or 'weekly'" }, { status: 400 });
+  }
+
   try {
-    const body = (await req.json()) as {
-      query: string;
-      filters?: SearchFilters;
-      frequency: "daily" | "weekly";
-    };
-    if (!body.query || typeof body.query !== "string" || body.query.trim().length === 0) {
-      return NextResponse.json({ error: "Missing or invalid 'query'" }, { status: 400 });
-    }
-    if (body.frequency !== "daily" && body.frequency !== "weekly") {
-      return NextResponse.json({ error: "Invalid 'frequency' — must be 'daily' or 'weekly'" }, { status: 400 });
-    }
     await ensureLocalUser();
     const created = await db.searchAlert.create({
       data: {
         userId: getLocalUserId(),
-        query: body.query.trim(),
+        query: truncate(body.query.trim(), MAX_QUERY_LENGTH),
         filters: JSON.stringify(body.filters || {}),
         frequency: body.frequency,
       },
@@ -62,7 +91,7 @@ export async function POST(req: NextRequest) {
       alert: {
         id: created.id,
         query: created.query,
-        filters: JSON.parse(created.filters) as SearchFilters,
+        filters: safeJsonParse(created.filters),
         frequency: created.frequency as "daily" | "weekly",
         createdAt: created.createdAt,
         lastRunAt: created.lastRunAt,
@@ -78,11 +107,13 @@ export async function POST(req: NextRequest) {
  * DELETE /api/alerts?id=xxx — delete a search alert.
  */
 export async function DELETE(req: NextRequest) {
+  const rl = checkRateLimit(req, RATE_LIMIT);
+  if (!rl.ok) return rateLimitedResponse(rl);
   try {
     const { searchParams } = new URL(req.url);
     const id = searchParams.get("id");
-    if (!id) {
-      return NextResponse.json({ error: "Missing 'id' query parameter" }, { status: 400 });
+    if (!id || id.length > 100) {
+      return NextResponse.json({ error: "Missing or invalid 'id' query parameter" }, { status: 400 });
     }
     await ensureLocalUser();
     await db.searchAlert.deleteMany({

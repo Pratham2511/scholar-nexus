@@ -77,8 +77,21 @@ export async function searchPubmed(
   if (!esummaryRes.ok) {
     throw new Error(`PubMed ESummary HTTP ${esummaryRes.status}`);
   }
+  type ESummaryEntry = {
+    title?: string;
+    authors?: { name?: string }[];
+    pubdate?: string;
+    fulljournalname?: string;
+    epubdate?: string;
+    uid?: string;
+    articleids?: PubmedArticleId[];
+  };
+  type ESummaryResult = {
+    uids?: string[];
+  } & Record<string, ESummaryEntry>;
+
   const esummaryJson = (await esummaryRes.json()) as {
-    result?: Record<string, PubmedArticle & { title?: string; authors?: { name?: string }[]; pubdate?: string; fulljournalname?: string; epubdate?: string; uid?: string; articleids?: PubmedArticleId[] }>;
+    result?: ESummaryResult;
   };
 
   const result = esummaryJson.result || {};
@@ -87,7 +100,7 @@ export async function searchPubmed(
 
   for (const uid of uids) {
     if (uid === "uids") continue;
-    const entry = result[uid];
+    const entry = result[uid] as ESummaryEntry | undefined;
     if (!entry || !entry.title) continue;
 
     const title = normalizeText(entry.title);
