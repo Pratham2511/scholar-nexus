@@ -92,3 +92,8 @@ tool-results/
 # ────────────────────────────────────────────────────────────────────────────
 /coverage
 .nyc_output
+
+# Local build artifacts
+/download/
+.zscripts/dev.pid
+mini-services/.gitkeep
