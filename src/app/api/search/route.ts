@@ -14,6 +14,9 @@ import {
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
+// Vercel free tier default is 10s — too short for 9-source parallel search (12s per-source timeout).
+// Extend to 60s (max for Hobby tier). Ignored on self-hosted Node servers.
+export const maxDuration = 60;
 
 interface SearchRequestBody {
   query: string;

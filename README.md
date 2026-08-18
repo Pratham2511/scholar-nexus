@@ -435,16 +435,77 @@ scholar-nexus/
 
 ## Deployment
 
-### Vercel (recommended)
+### Recommended: Vercel + Neon Postgres (both 100% free)
 
-1. Push the repo to GitHub.
-2. Go to [vercel.com/new](https://vercel.com/new) and import the repo.
-3. Add environment variables from `.env.example` in the Vercel dashboard.
-4. For production, switch `DATABASE_URL` to a PostgreSQL connection string (e.g., Vercel Postgres, Neon, Supabase).
-5. Update `prisma/schema.prisma` datasource provider from `sqlite` to `postgresql`.
-6. Deploy.
+This is the simplest free-tier setup for a Next.js 16 + Prisma project. Total cost: **$0/month** for typical usage.
 
-### Self-hosted (Caddy + Node)
+**Why this combo?**
+- Vercel = native Next.js host (zero config, 1-click GitHub deploy)
+- Neon = serverless Postgres with branching, scales to zero, no cold-start lag
+- Both have generous "always free" tiers that won't expire
+
+**Vercel Hobby (free) limits to know:**
+- 100GB bandwidth/month
+- Serverless functions: 60s max duration (already configured via `maxDuration = 60` in API routes)
+- 100GB-hr serverless execution time
+- Function cold starts (~250ms) — acceptable
+
+**Neon Free (Postgres) limits:**
+- 0.5GB storage (plenty for personal use)
+- 1 project, unlimited branches
+- Scales to zero after 5 min idle (~300ms cold start)
+
+#### Step 1 — Create Neon Postgres database
+
+1. Go to https://neon.tech and sign up with GitHub (free, no credit card).
+2. Create a project → copy the **connection string** (looks like `postgresql://user:pass@ep-xxx.region.aws.neon.tech/dbname?sslmode=require`).
+
+#### Step 2 — Switch Prisma from SQLite to PostgreSQL
+
+Edit `prisma/schema.prisma`:
+
+```diff
+ datasource db {
+-  provider = "sqlite"
++  provider = "postgresql"
+   url      = env("DATABASE_URL")
+ }
+```
+
+Then push the schema to your Neon DB:
+
+```bash
+# Set DATABASE_URL locally (temporarily) to your Neon connection string
+export DATABASE_URL="postgresql://user:pass@ep-xxx.region.aws.neon.tech/dbname?sslmode=require"
+bun run db:push     # creates all 9 tables in Postgres
+bun run db:generate # regenerate Prisma client for Postgres
+```
+
+Commit this change — Vercel will pick it up automatically.
+
+#### Step 3 — Deploy on Vercel
+
+1. Go to https://vercel.com/new
+2. Import the `Pratham2511/scholar-nexus` repo
+3. Vercel auto-detects Next.js — defaults are correct
+4. Add Environment Variables in the Vercel dashboard:
+
+   | Name | Value |
+   |---|---|
+   | `DATABASE_URL` | `postgresql://...?sslmode=require` (from Neon) |
+   | `NODE_ENV` | `production` |
+   | `IEEE_API_KEY` | *(optional — your IEEE key, or leave blank)* |
+   | `CORE_API_KEY` | *(optional — your CORE key, or leave blank)* |
+
+5. Click **Deploy** — Vercel builds and gives you a `https://scholar-nexus.vercel.app` URL
+6. Every `git push` to `main` triggers a redeploy automatically
+
+#### Step 4 — Verify
+
+- Visit the deployed URL → search for a paper → should return results in 5-15s
+- If searches time out, confirm `maxDuration = 60` is set in `src/app/api/search/route.ts` (it is by default)
+
+### Self-hosted (Caddy + Node) — alternative
 
 A sample `Caddyfile` is included for reverse-proxying to the Next.js server on port 3000:
 
@@ -457,20 +518,32 @@ bun run start &      # serves on :3000
 caddy run
 ```
 
-The included `Caddyfile` listens on `:81` and proxies to `localhost:3000` with proper `X-Forwarded-*` headers.
+The included `Caddyfile` listens on `:81` and proxies to `localhost:3000` with proper `X-Forwarded-*` headers. Suitable for VPS deployments (Oracle Cloud Always Free, Hetzner CX11, etc.).
+
+### Free-tier hosting comparison
+
+| Host | Free tier | Best for | Watch out |
+|---|---|---|---|
+| **Vercel Hobby** | 100GB bw, 60s fn timeout | Next.js web apps | Cold starts on free tier |
+| **Neon Postgres** | 0.5GB, scales to zero | Serverless DB | 5-min idle → cold start |
+| **Render Free** | 512MB RAM, sleeps after 15 min | Long-running servers | 30s cold start per visit |
+| **Fly.io Free** | 3 shared-CPU VMs | Always-on apps | Requires credit card |
+| **Oracle Cloud Free** | 24GB RAM ARM VM, always free | Self-hosting | Manual Linux setup |
 
 ### Database migration (SQLite → PostgreSQL)
 
+If you have local SQLite data you want to migrate:
+
 ```bash
-# 1. Update prisma/schema.prisma:
-#    datasource db { provider = "postgresql" ... }
+# 1. Export from SQLite
+npx prisma db pull --url sqlite:./db/custom.db
 
-# 2. Set DATABASE_URL to your Postgres connection string in .env
+# 2. Switch schema provider to postgresql (see Step 2 above)
 
-# 3. Push schema
+# 3. Push to Postgres
 bun run db:push
 
-# 4. (Optional) Migrate existing data with prisma db pull / db push
+# 4. Migrate data with a script (out of scope — use prisma-data-mapper or raw SQL)
 ```
 
 ---
