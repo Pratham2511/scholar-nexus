@@ -286,13 +286,18 @@ export function Desk({ section = "discover" }: { section?: Section }) {
     <div className="desk-list">
       {searching && !result && (
         <div className="desk-loading" role="status">
-          <div className="desk-loading-dots" aria-hidden="true">
-            <span className="loading-dot-1">·</span>
-            <span className="loading-dot-2">·</span>
-            <span className="loading-dot-3">·</span>
+          <div className="desk-loading-indicator" aria-hidden="true">
+            <div className="flex items-center justify-center gap-3 font-mono text-xs text-accent uppercase tracking-widest mb-3">
+              <span>§ QUERY PROVENANCE</span>
+              <span className="text-text-tertiary">{"//"}</span>
+              <span>CROSSREF · ARXIV · EUROPE PMC</span>
+            </div>
+            <div className="h-[2px] w-56 mx-auto bg-border overflow-hidden relative">
+              <div className="h-full bg-accent w-1/3 animate-pulse" />
+            </div>
           </div>
-          <h2>Searching academic sources…</h2>
-          <p>You can edit your query while the sources respond.</p>
+          <h2>Resolving academic literature…</h2>
+          <p>Live sources are streaming. You can refine your search terms in the meantime.</p>
         </div>
       )}
       {searchError && (
@@ -389,7 +394,7 @@ export function Desk({ section = "discover" }: { section?: Section }) {
           aria-label="ScholarNexus home"
           className="inline-flex items-center"
         >
-          <Logo size="sm" />
+          <Logo size="sm" showDescriptor />
         </Link>
         <nav aria-label="Main navigation">
           {(["discover", "projects", "reading", "updates"] as Section[]).map(
@@ -399,7 +404,7 @@ export function Desk({ section = "discover" }: { section?: Section }) {
                 key={s}
                 aria-current={section === s ? "page" : undefined}
               >
-                <span className="nav-index">0{i + 1}</span>
+                <span className="nav-index">§ 0{i + 1}</span>
                 {s[0].toUpperCase() + s.slice(1)}
                 {s === "updates" && state.inbox.some((n) => !n.read) && (
                   <span className="unread-count">
@@ -410,7 +415,7 @@ export function Desk({ section = "discover" }: { section?: Section }) {
             ),
           )}
         </nav>
-        <span className="local-label">Personal research desk</span>
+        <span className="local-label">§ EVIDENCE DESK</span>
       </header>
       <main id="workspace" className="desk-main">
         <div className="desk-kicker">
@@ -907,7 +912,7 @@ function PaperRow({
       className={"paper-row" + (selected ? " selected" : "")}
       style={{ animationDelay: `${Math.min(index * 0.04, 0.3)}s` }}
     >
-      <span className="paper-number">{String(index + 1).padStart(2, "0")}</span>
+      <span className="paper-number">§ {String(index + 1).padStart(2, "0")}</span>
       <div className="paper-main">
         <div className="paper-meta">
           <span>{p.year ?? "Year unknown"}</span>
@@ -1243,7 +1248,7 @@ function Reader({
             </>
           )}
           <div className="text-label">
-            {doc ? "FULL TEXT · PAGE " + page : "ABSTRACT ONLY"}
+            {doc ? `§ FULL TEXT ⟦ PAGE ${page} ⟧` : "§ ABSTRACT ONLY"}
           </div>
           <div
             className="source-passage"

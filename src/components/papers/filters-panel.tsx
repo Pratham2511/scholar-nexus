@@ -39,12 +39,12 @@ export function FiltersPanel({ compact = false }: { compact?: boolean }) {
       <div className="flex items-center justify-between gap-2 mb-3">
         <button
           onClick={() => setExpanded(!expanded)}
-          className="flex items-center gap-2 font-ui font-medium text-xs uppercase tracking-wider text-text-secondary hover:text-gold transition duration-150"
+          className="flex items-center gap-2 font-ui font-medium text-xs uppercase tracking-wider text-text-secondary hover:text-accent transition duration-150"
         >
           <SlidersHorizontal className="h-3.5 w-3.5" />
           Advanced Filters
           {activeCount > 0 && (
-            <span className="inline-flex h-4 min-w-4 items-center justify-center rounded-[2px] bg-gold px-1 font-mono text-[10px] text-ground">
+            <span className="inline-flex h-4 min-w-4 items-center justify-center rounded-[2px] bg-accent px-1 font-mono text-[10px] text-ground">
               {activeCount}
             </span>
           )}

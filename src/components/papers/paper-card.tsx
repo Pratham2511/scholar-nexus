@@ -82,11 +82,11 @@ export function PaperCard({
     return (
       <Card
         onClick={openDetails}
-        className="p-3.5 cursor-pointer rounded-[3px] border-border bg-surface hover:border-border-2 hover:border-l-2 hover:border-l-gold shadow-none transition duration-150"
+        className="p-3.5 cursor-pointer rounded-[2px] border-border bg-surface hover:border-border-2 shadow-none transition duration-150"
       >
         <div className="flex items-start gap-3">
           <div className="flex-1 min-w-0">
-            <h3 className="font-display text-base font-normal line-clamp-2 text-text-primary hover:text-gold">
+            <h3 className="font-display text-base font-normal line-clamp-2 text-text-primary hover:text-accent">
               {paper.title}
             </h3>
             <p className="font-mono text-xs text-text-tertiary mt-1 truncate">
@@ -103,7 +103,7 @@ export function PaperCard({
   return (
     <Card
       onClick={openDetails}
-      className="p-6 cursor-pointer rounded-[3px] border-border bg-surface hover:border-border-2 hover:border-l-2 hover:border-l-gold shadow-none transition duration-150 group"
+      className="p-6 cursor-pointer rounded-[2px] border-border bg-surface hover:border-border-2 shadow-none transition duration-150 group"
     >
       <div className="flex items-start justify-between gap-3 mb-2.5">
         <div className="flex flex-wrap gap-1.5">
@@ -116,7 +116,7 @@ export function PaperCard({
             </span>
           ))}
           {paper.openAccess && (
-            <Badge variant="outline" className="text-[0.65rem] border-green-bright text-green-bright bg-transparent font-mono uppercase">
+            <Badge variant="outline" className="text-[0.65rem] border-provenance text-provenance bg-transparent font-mono uppercase">
               Open Access
             </Badge>
           )}
@@ -125,7 +125,7 @@ export function PaperCard({
           <div className="shrink-0 flex items-center gap-2">
             <div className="h-1 rounded-full bg-border-2 w-14 overflow-hidden">
               <div
-                className="h-full bg-gold transition-all"
+                className="h-full bg-accent transition-all"
                 style={{ width: `${score}%` }}
               />
             </div>
@@ -134,7 +134,7 @@ export function PaperCard({
         )}
       </div>
 
-      <h3 className="font-display text-xl font-normal leading-snug text-text-primary group-hover:text-gold transition duration-150 mb-2">
+      <h3 className="font-display text-xl font-normal leading-snug text-text-primary group-hover:text-accent transition duration-150 mb-2">
         {paper.title}
       </h3>
 
@@ -149,7 +149,7 @@ export function PaperCard({
                     e.stopPropagation();
                     openAuthor(name);
                   }}
-                  className="hover:text-gold hover:underline"
+                  className="hover:text-accent hover:underline"
                 >
                   {name}
                 </button>
@@ -186,7 +186,7 @@ export function PaperCard({
           </span>
         )}
         {paper.doi && (
-          <span className="flex items-center gap-1 text-teal hover:underline">
+          <span className="flex items-center gap-1 text-link hover:underline">
             <FileText className="h-3 w-3" />
             DOI: {paper.doi}
           </span>
@@ -218,7 +218,7 @@ export function PaperCard({
             <span className="tracking-widest">···</span>
           ) : isSaved ? (
             <>
-              <BookmarkCheck className="h-3 w-3 text-gold" />
+              <BookmarkCheck className="h-3 w-3 text-provenance" />
               <span>Saved</span>
             </>
           ) : (
@@ -232,7 +232,7 @@ export function PaperCard({
           size="sm"
           variant="outline"
           onClick={handleCompare}
-          className={`h-7 text-xs font-mono lowercase tracking-normal ${inCompare ? "border-gold text-gold" : ""}`}
+          className={`h-7 text-xs font-mono lowercase tracking-normal ${inCompare ? "border-accent text-accent" : ""}`}
         >
           <GitCompareArrows className="h-3 w-3" />
           <span>{inCompare ? "In compare" : "Compare"}</span>
@@ -246,7 +246,7 @@ export function PaperCard({
             className="h-7 text-xs font-mono lowercase tracking-normal"
           >
             <a href={paper.pdfLink} target="_blank" rel="noopener noreferrer">
-              <ExternalLink className="h-3 w-3 text-teal" />
+              <ExternalLink className="h-3 w-3 text-link" />
               <span>PDF</span>
             </a>
           </Button>
@@ -255,7 +255,7 @@ export function PaperCard({
           size="sm"
           variant="ghost"
           onClick={openDetails}
-          className="h-7 ml-auto text-teal hover:text-gold font-ui uppercase tracking-wider text-[0.7rem]"
+          className="h-7 ml-auto text-link hover:text-accent font-ui uppercase tracking-wider text-[0.7rem]"
         >
           Details
           <ChevronRight className="h-3 w-3" />

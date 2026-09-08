@@ -111,13 +111,13 @@ export function ResultsView() {
       {understoodQuery && (
         <Card className="p-4 mb-4 bg-surface border-border-2 rounded-[3px] shadow-none">
           <div className="flex items-start gap-3">
-            <div className="flex h-8 w-8 items-center justify-center rounded-[2px] bg-surface-2 text-gold shrink-0">
+            <div className="flex h-8 w-8 items-center justify-center rounded-[2px] bg-surface-2 text-accent shrink-0">
               <Sparkles className="h-4 w-4" />
             </div>
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2 mb-1">
                 <span className="font-ui font-medium text-xs uppercase tracking-wider text-text-secondary">AI Query Understanding</span>
-                <Badge variant="outline" className="text-[0.65rem] border-gold text-gold">
+                <Badge variant="outline" className="text-[0.65rem] border-accent text-accent">
                   Topic: {understoodQuery.topic}
                 </Badge>
               </div>

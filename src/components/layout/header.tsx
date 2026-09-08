@@ -87,13 +87,13 @@ export function Header() {
                 onClick={() => setView(item.view)}
                 className={cn(
                   "h-8 gap-1.5 font-ui uppercase tracking-wider text-xs",
-                  isActive && "border-b-2 border-gold text-text-primary",
+                  isActive && "border-b-2 border-accent text-text-primary",
                 )}
               >
                 <Icon className="h-3.5 w-3.5" />
                 <span className="hidden md:inline">{item.label}</span>
                 {badge > 0 && (
-                  <span className="ml-0.5 inline-flex h-4 min-w-4 items-center justify-center rounded-sm bg-red px-1 font-mono text-[10px] text-ground">
+                  <span className="ml-0.5 inline-flex h-4 min-w-4 items-center justify-center rounded-sm bg-accent px-1 font-mono text-[10px] text-ground">
                     {badge}
                   </span>
                 )}
