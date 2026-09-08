@@ -6,7 +6,19 @@ import { SearchBar } from "@/components/papers/search-bar";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Sparkles, TrendingUp, Clock, BookMarked, Zap, ShieldCheck, Globe2, Layers, Search, Library, Database } from "lucide-react";
+import { CountUp } from "@/components/ui/count-up";
+import {
+  Sparkles,
+  TrendingUp,
+  Clock,
+  BookMarked,
+  Zap,
+  ShieldCheck,
+  Globe2,
+  Layers,
+  Search,
+  Database,
+} from "lucide-react";
 import { refreshRecentSearches, runSearch } from "@/lib/actions";
 
 interface TrendingTopic {
@@ -35,7 +47,7 @@ export function HomeView() {
       .then((r) => r.json())
       .then((d) => setTrending(d.topics || []))
       .catch(() => setTrending([]));
-    // V2: Load stats for the stats bar
+    // Load stats for the stats bar
     void fetch("/api/stats")
       .then((r) => r.json())
       .then((d) => setStats(d))
@@ -56,50 +68,62 @@ export function HomeView() {
     <div className="mx-auto max-w-5xl px-4 sm:px-6 py-10 sm:py-16">
       {/* Hero */}
       <div className="text-center mb-10">
-        <div className="inline-flex items-center gap-2 rounded-full border border-emerald-500/30 bg-emerald-500/5 px-4 py-1.5 text-sm text-emerald-700 dark:text-emerald-300 mb-6">
-          <Sparkles className="h-3.5 w-3.5" />
-          AI-Powered Multi-Source Research Discovery · v2.0
+        <div className="inline-flex items-center gap-2 rounded-[2px] border border-border-2 bg-surface px-3 py-1 font-mono text-xs uppercase tracking-wider text-text-tertiary mb-6">
+          <span className="text-gold">●</span>
+          The Scholar's Study · Academic Search & Synthesis
         </div>
-        <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold tracking-tight text-balance">
+        <h1 className="font-display text-4xl sm:text-5xl lg:text-6xl font-light tracking-tight text-balance text-text-primary">
           Find the right papers,
           <br />
-          <span className="bg-gradient-to-r from-emerald-600 to-teal-500 bg-clip-text text-transparent">
+          <em className="text-gold font-light not-italic">
             across every academic source.
-          </span>
+          </em>
         </h1>
-        <p className="mt-5 text-lg text-muted-foreground max-w-2xl mx-auto text-balance">
-          Describe your research in natural language. ScholarAI understands your intent,
-          searches Semantic Scholar, arXiv, Crossref, PubMed, OpenAlex, IEEE, bioRxiv,
-          medRxiv &amp; Europe PMC in parallel, removes duplicates, ranks papers by
-          relevance — with AI-generated insights, citation graphs, and PDF Q&amp;A for each.
+        <p className="mt-5 font-ui text-base text-text-secondary font-light max-w-2xl mx-auto leading-relaxed">
+          Describe your research in natural language. Search across Crossref, arXiv, Europe PMC, OpenAlex, and PubMed with source-linked evidence synthesis and citation networks.
         </p>
       </div>
 
-      {/* V2: Stats bar */}
+      {/* Stats bar with CountUp */}
       {stats && (
-        <div className="mb-6 flex flex-wrap items-center justify-center gap-x-6 gap-y-2 text-sm text-muted-foreground">
+        <div className="mb-8 flex flex-wrap items-center justify-center gap-x-6 gap-y-2 font-mono text-xs text-text-tertiary">
           <span className="flex items-center gap-1.5">
-            <Search className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
-            <strong className="text-foreground tabular-nums">{stats.totalSearches}</strong> searches
+            <Search className="h-3.5 w-3.5 text-gold" />
+            <strong className="text-text-primary tabular-nums font-medium">
+              <CountUp end={stats.totalSearches} />
+            </strong>{" "}
+            searches
           </span>
           <span className="flex items-center gap-1.5">
-            <BookMarked className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
-            <strong className="text-foreground tabular-nums">{stats.totalPapersSaved}</strong> papers saved
+            <BookMarked className="h-3.5 w-3.5 text-gold" />
+            <strong className="text-text-primary tabular-nums font-medium">
+              <CountUp end={stats.totalPapersSaved} />
+            </strong>{" "}
+            papers saved
           </span>
           <span className="flex items-center gap-1.5">
-            <Zap className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
-            <strong className="text-foreground tabular-nums">{stats.totalSourcesActive}</strong> sources active
+            <Zap className="h-3.5 w-3.5 text-gold" />
+            <strong className="text-text-primary tabular-nums font-medium">
+              <CountUp end={stats.totalSourcesActive} />
+            </strong>{" "}
+            sources active
           </span>
           {stats.totalCollections > 0 && (
             <span className="flex items-center gap-1.5">
-              <Layers className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
-              <strong className="text-foreground tabular-nums">{stats.totalCollections}</strong> collections
+              <Layers className="h-3.5 w-3.5 text-teal" />
+              <strong className="text-text-primary tabular-nums font-medium">
+                <CountUp end={stats.totalCollections} />
+              </strong>{" "}
+              collections
             </span>
           )}
           {stats.totalAlerts > 0 && (
             <span className="flex items-center gap-1.5">
-              <Database className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
-              <strong className="text-foreground tabular-nums">{stats.totalAlerts}</strong> alerts
+              <Database className="h-3.5 w-3.5 text-red" />
+              <strong className="text-text-primary tabular-nums font-medium">
+                <CountUp end={stats.totalAlerts} />
+              </strong>{" "}
+              alerts
             </span>
           )}
         </div>
@@ -110,27 +134,27 @@ export function HomeView() {
         <SearchBar hero />
       </div>
 
-      {/* V2: Feature highlights — expanded with real value subtitles */}
+      {/* Feature highlights */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-12">
         <FeatureCard
           icon={Globe2}
-          title="9 Sources in Parallel"
-          desc="Semantic Scholar, arXiv, Crossref, PubMed, OpenAlex, IEEE, bioRxiv, medRxiv, Europe PMC — all at once."
+          title="Multi-Source Search"
+          desc="Crossref, arXiv, Europe PMC, OpenAlex, Semantic Scholar in parallel."
         />
         <FeatureCard
           icon={Layers}
           title="Smart Deduplication"
-          desc="Same paper on multiple sources? We merge by DOI + title and keep the richest metadata."
+          desc="Merged by DOI + title, preserving highest quality metadata."
         />
         <FeatureCard
           icon={Zap}
-          title="AI-Ranked Results"
-          desc="Relevance score 0–100 across 6 dimensions: relevance, citations, recency, venue, OA, multi-source."
+          title="Scholarly Ranking"
+          desc="Multi-dimensional relevance scoring across citation and venue context."
         />
         <FeatureCard
           icon={ShieldCheck}
-          title="AI Insights + Synthesis"
-          desc="Per-paper summary, contributions, limitations + cross-paper evidence synthesis with one click."
+          title="Evidence Traceability"
+          desc="Direct linkage from synthesized claims to supporting passages."
         />
       </div>
 
@@ -138,21 +162,23 @@ export function HomeView() {
         {/* Trending */}
         <Card className="p-5">
           <div className="flex items-center gap-2 mb-4">
-            <TrendingUp className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
-            <h2 className="font-semibold">Trending Research Topics</h2>
+            <TrendingUp className="h-4 w-4 text-gold" />
+            <h2 className="font-display text-xl font-normal text-text-primary">
+              Trending Inquiries
+            </h2>
           </div>
           <div className="flex flex-wrap gap-2">
             {trending.length === 0 ? (
-              <p className="text-sm text-muted-foreground">Loading trending topics…</p>
+              <p className="font-mono text-xs text-text-tertiary">Loading inquiries…</p>
             ) : (
               trending.map((t) => (
                 <button
                   key={t.topic}
                   onClick={() => handleTrendingClick(t.topic)}
-                  className="group rounded-full border border-border bg-background px-3 py-1.5 text-sm hover:border-emerald-500/50 hover:bg-emerald-500/5 transition text-left"
+                  className="group rounded-[2px] border border-border-2 bg-surface px-2.5 py-1.5 text-left text-xs transition duration-150 hover:border-gold"
                 >
-                  <span className="text-foreground">{t.topic}</span>
-                  <span className="ml-2 text-xs text-muted-foreground group-hover:text-emerald-600 dark:group-hover:text-emerald-400">
+                  <span className="font-ui text-text-primary">{t.topic}</span>
+                  <span className="ml-2 font-mono text-[0.65rem] text-text-tertiary group-hover:text-gold uppercase">
                     {t.domain}
                   </span>
                 </button>
@@ -164,26 +190,28 @@ export function HomeView() {
         {/* Recent searches */}
         <Card className="p-5">
           <div className="flex items-center gap-2 mb-4">
-            <Clock className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
-            <h2 className="font-semibold">Recent Searches</h2>
+            <Clock className="h-4 w-4 text-gold" />
+            <h2 className="font-display text-xl font-normal text-text-primary">
+              Recent Searches
+            </h2>
           </div>
           {recentSearches.length === 0 ? (
-            <div className="text-sm text-muted-foreground">
-              <p>No searches yet. Try one of the trending topics above, or describe your research in the search bar.</p>
+            <div className="font-ui text-xs text-text-tertiary">
+              <p>No recorded searches. Enter a research question above.</p>
             </div>
           ) : (
-            <ul className="space-y-2 max-h-64 overflow-y-auto pr-1">
+            <ul className="space-y-1.5 max-h-64 overflow-y-auto pr-1">
               {recentSearches.slice(0, 8).map((s) => (
                 <li key={s.id}>
                   <button
                     onClick={() => handleRecentClick(s.query)}
-                    className="w-full flex items-center justify-between gap-3 rounded-md border border-border bg-background px-3 py-2 text-left text-sm hover:bg-muted/50 transition"
+                    className="w-full flex items-center justify-between gap-3 rounded-[2px] border border-border bg-surface px-3 py-2 text-left font-mono text-xs text-text-secondary hover:border-gold hover:text-gold transition duration-150"
                   >
                     <span className="truncate flex-1">{s.query}</span>
                     {s.resultCount !== null && (
-                      <Badge variant="secondary" className="shrink-0">
-                        {s.resultCount} results
-                      </Badge>
+                      <span className="font-mono text-[0.65rem] text-text-tertiary uppercase">
+                        {s.resultCount} records
+                      </span>
                     )}
                   </button>
                 </li>
@@ -193,40 +221,40 @@ export function HomeView() {
         </Card>
       </div>
 
-      {/* CTA row */}
-      <div className="mt-12 grid sm:grid-cols-3 gap-4">
+      {/* Navigation cards */}
+      <div className="mt-10 grid sm:grid-cols-3 gap-4">
         <Card className="p-5 flex items-start gap-3">
-          <BookMarked className="h-5 w-5 text-emerald-600 dark:text-emerald-400 mt-0.5 shrink-0" />
+          <BookMarked className="h-4 w-4 text-gold mt-1 shrink-0" />
           <div>
-            <h3 className="font-medium text-sm">Saved Library & Collections</h3>
-            <p className="text-xs text-muted-foreground mt-1">
-              Bookmark papers and organize them into named collections for later reference.
+            <h3 className="font-display text-lg font-normal text-text-primary">Saved Library</h3>
+            <p className="font-ui text-xs text-text-secondary font-light mt-1 leading-relaxed">
+              Curate literature into projects with inclusion criteria and status screening.
             </p>
-            <Button variant="link" size="sm" className="px-0 mt-2 h-auto text-emerald-600 dark:text-emerald-400" onClick={() => setView("library")}>
+            <Button variant="link" size="sm" className="px-0 mt-2 h-auto text-teal hover:text-gold" onClick={() => setView("library")}>
               Open library →
             </Button>
           </div>
         </Card>
         <Card className="p-5 flex items-start gap-3">
-          <Sparkles className="h-5 w-5 text-emerald-600 dark:text-emerald-400 mt-0.5 shrink-0" />
+          <Sparkles className="h-4 w-4 text-gold mt-1 shrink-0" />
           <div>
-            <h3 className="font-medium text-sm">Citation Network</h3>
-            <p className="text-xs text-muted-foreground mt-1">
-              Visualize how papers cite each other in a force-directed graph. Click any node to dive in.
+            <h3 className="font-display text-lg font-normal text-text-primary">Citation Network</h3>
+            <p className="font-ui text-xs text-text-secondary font-light mt-1 leading-relaxed">
+              Visualize scholarly connections and citation graphs across related studies.
             </p>
-            <Button variant="link" size="sm" className="px-0 mt-2 h-auto text-emerald-600 dark:text-emerald-400" onClick={() => setView("network")}>
+            <Button variant="link" size="sm" className="px-0 mt-2 h-auto text-teal hover:text-gold" onClick={() => setView("network")}>
               Open network →
             </Button>
           </div>
         </Card>
         <Card className="p-5 flex items-start gap-3">
-          <Layers className="h-5 w-5 text-emerald-600 dark:text-emerald-400 mt-0.5 shrink-0" />
+          <Layers className="h-4 w-4 text-gold mt-1 shrink-0" />
           <div>
-            <h3 className="font-medium text-sm">AI Recommendations</h3>
-            <p className="text-xs text-muted-foreground mt-1">
-              Get personalized topic suggestions based on your saved papers and followed authors.
+            <h3 className="font-display text-lg font-normal text-text-primary">Research Desk</h3>
+            <p className="font-ui text-xs text-text-secondary font-light mt-1 leading-relaxed">
+              Synthesize findings, trace source passages, and export bibliography matrices.
             </p>
-            <Button variant="link" size="sm" className="px-0 mt-2 h-auto text-emerald-600 dark:text-emerald-400" onClick={() => setView("profile")}>
+            <Button variant="link" size="sm" className="px-0 mt-2 h-auto text-teal hover:text-gold" onClick={() => setView("profile")}>
               View profile →
             </Button>
           </div>
@@ -239,11 +267,11 @@ export function HomeView() {
 function FeatureCard({ icon: Icon, title, desc }: { icon: React.ElementType; title: string; desc: string }) {
   return (
     <Card className="p-4 flex flex-col items-center text-center gap-2">
-      <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
-        <Icon className="h-5 w-5" />
+      <div className="flex h-9 w-9 items-center justify-center rounded-[2px] border border-border-2 bg-surface-2 text-gold">
+        <Icon className="h-4 w-4" />
       </div>
-      <div className="font-medium text-sm">{title}</div>
-      <div className="text-xs text-muted-foreground leading-snug">{desc}</div>
+      <div className="font-display text-base font-normal text-text-primary">{title}</div>
+      <div className="font-ui text-xs text-text-secondary font-light leading-snug">{desc}</div>
     </Card>
   );
 }

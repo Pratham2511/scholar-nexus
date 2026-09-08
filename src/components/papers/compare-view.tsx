@@ -45,7 +45,7 @@ export function CompareView() {
             Use the “Compare” button on any paper card to add it here.
             You can compare 2–4 papers side by side.
           </p>
-          <Button onClick={() => setView("results")} className="gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white">
+          <Button onClick={() => setView("results")} className="gap-1.5">
             <BookOpen className="h-4 w-4" />
             Browse results
           </Button>
@@ -127,7 +127,7 @@ export function CompareView() {
                       href={su.url}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="inline-flex items-center gap-1 rounded bg-emerald-500/10 px-2 py-0.5 text-xs text-emerald-700 dark:text-emerald-300 hover:bg-emerald-500/20"
+                      className="inline-flex items-center gap-1 rounded-[2px] border border-border-2 px-2 py-0.5 font-mono text-[0.65rem] text-text-secondary hover:border-gold hover:text-gold uppercase transition duration-150"
                     >
                       <ExternalLink className="h-3 w-3" />
                       {su.source}
@@ -271,7 +271,7 @@ function AbstractCell({ abstract, paperId }: { abstract: string; paperId: string
       {abstract.length > 200 && (
         <button
           onClick={() => setExpanded(!expanded)}
-          className="mt-1 inline-flex items-center gap-0.5 text-xs text-emerald-600 dark:text-emerald-400 hover:underline"
+          className="mt-1 inline-flex items-center gap-0.5 font-mono text-xs text-teal hover:text-gold hover:underline"
         >
           {expanded ? (
             <>

@@ -149,23 +149,23 @@ export function DetailsView() {
             </Badge>
           ))}
           {p.openAccess && (
-            <Badge variant="outline" className="text-xs bg-emerald-500/5 border-emerald-500/30 text-emerald-700 dark:text-emerald-300">
+            <Badge variant="outline" className="text-[0.65rem] border-green-bright text-green-bright bg-transparent font-mono uppercase">
               Open Access
             </Badge>
           )}
           {p.paperType && (
-            <Badge variant="outline" className="text-xs">{p.paperType}</Badge>
+            <Badge variant="outline" className="text-[0.65rem] border-border-2 font-mono uppercase">{p.paperType}</Badge>
           )}
         </div>
 
-        <h1 className="text-2xl sm:text-3xl font-bold tracking-tight mb-3 text-balance">
+        <h1 className="font-display text-2xl sm:text-3xl font-normal tracking-tight mb-3 text-text-primary text-balance">
           {p.title}
         </h1>
 
         {p.authors.length > 0 && (
-          <div className="flex items-start gap-2 text-muted-foreground mb-4">
-            <Users className="h-4 w-4 mt-0.5 shrink-0" />
-            <span className="text-sm">
+          <div className="flex items-start gap-2 text-text-secondary mb-4 font-ui text-xs font-light">
+            <Users className="h-3.5 w-3.5 mt-0.5 shrink-0 text-text-tertiary" />
+            <span>
               {p.authors.map((name, i) => (
                 <span key={i}>
                   <button
@@ -173,7 +173,7 @@ export function DetailsView() {
                       setSelectedAuthorName(name);
                       setView("author");
                     }}
-                    className="hover:text-emerald-600 dark:hover:text-emerald-400 hover:underline"
+                    className="hover:text-gold hover:underline"
                   >
                     {name}
                   </button>
@@ -184,33 +184,33 @@ export function DetailsView() {
           </div>
         )}
 
-        <div className="flex flex-wrap items-center gap-x-5 gap-y-2 text-sm text-muted-foreground mb-4">
+        <div className="flex flex-wrap items-center gap-x-5 gap-y-2 font-mono text-xs text-text-tertiary mb-4">
           {p.year && (
             <span className="flex items-center gap-1.5">
-              <Calendar className="h-4 w-4" />
+              <Calendar className="h-3.5 w-3.5" />
               {p.year}
             </span>
           )}
           {(p.citationCount ?? 0) > 0 && (
             <span className="flex items-center gap-1.5">
-              <Quote className="h-4 w-4" />
+              <Quote className="h-3.5 w-3.5" />
               {(p.citationCount?.toLocaleString() ?? "Unknown")} citations
             </span>
           )}
           {p.publisher && (
             <span className="flex items-center gap-1.5">
-              <Award className="h-4 w-4" />
+              <Award className="h-3.5 w-3.5" />
               {p.publisher}
             </span>
           )}
           {p.doi && (
             <span className="flex items-center gap-1.5">
-              <FileText className="h-4 w-4" />
+              <FileText className="h-3.5 w-3.5" />
               <a
                 href={`https://doi.org/${p.doi}`}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-emerald-600 dark:text-emerald-400 hover:underline"
+                className="text-teal hover:underline"
               >
                 {p.doi}
               </a>
@@ -328,15 +328,15 @@ export function DetailsView() {
       </Card>
 
       {/* AI Insights */}
-      <Card className="p-6 mb-4 bg-gradient-to-br from-emerald-500/5 to-teal-500/5 border-emerald-500/20">
+      <Card className="p-6 mb-4 bg-surface border border-border border-l-2 border-l-red rounded-[3px] shadow-none">
         <div className="flex items-center gap-2 mb-4">
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
-            <Sparkles className="h-4 w-4" />
-          </div>
-          <h2 className="font-semibold">AI-Powered Analysis</h2>
+          <span className="font-mono text-xs uppercase tracking-wider text-red font-semibold">
+            AI ANALYSIS
+          </span>
+          <span className="font-ui text-xs text-text-tertiary">·</span>
+          <h2 className="font-display text-xl font-normal text-text-primary">Paper Insights</h2>
           {loadingInsights && (
-            <Badge variant="outline" className="text-xs gap-1">
-              <Loader2 className="h-3 w-3 animate-spin" />
+            <Badge variant="outline" className="text-[0.65rem] border-gold text-gold">
               Generating…
             </Badge>
           )}

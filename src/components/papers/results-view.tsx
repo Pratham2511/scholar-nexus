@@ -109,27 +109,27 @@ export function ResultsView() {
 
       {/* AI understanding summary */}
       {understoodQuery && (
-        <Card className="p-4 mb-4 bg-gradient-to-br from-emerald-500/5 to-teal-500/5 border-emerald-500/20">
+        <Card className="p-4 mb-4 bg-surface border-border-2 rounded-[3px] shadow-none">
           <div className="flex items-start gap-3">
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 shrink-0">
+            <div className="flex h-8 w-8 items-center justify-center rounded-[2px] bg-surface-2 text-gold shrink-0">
               <Sparkles className="h-4 w-4" />
             </div>
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2 mb-1">
-                <span className="font-medium text-sm">AI Query Understanding</span>
-                <Badge variant="outline" className="text-xs bg-emerald-500/5 border-emerald-500/30 text-emerald-700 dark:text-emerald-300">
+                <span className="font-ui font-medium text-xs uppercase tracking-wider text-text-secondary">AI Query Understanding</span>
+                <Badge variant="outline" className="text-[0.65rem] border-gold text-gold">
                   Topic: {understoodQuery.topic}
                 </Badge>
               </div>
-              <p className="text-sm text-muted-foreground mb-2">{understoodQuery.reasoning}</p>
+              <p className="font-ui text-xs text-text-secondary font-light mb-2">{understoodQuery.reasoning}</p>
               <div className="flex flex-wrap gap-1.5">
                 {understoodQuery.keywords.map((k) => (
-                  <span key={k} className="rounded bg-emerald-500/10 px-2 py-0.5 text-xs text-emerald-700 dark:text-emerald-300">
+                  <span key={k} className="rounded-[2px] border border-border-2 bg-surface-2 px-2 py-0.5 font-mono text-[0.65rem] text-text-primary">
                     {k}
                   </span>
                 ))}
                 {understoodQuery.excludeKeywords.map((k) => (
-                  <span key={k} className="rounded bg-red-500/10 px-2 py-0.5 text-xs text-red-700 dark:text-red-300 line-through">
+                  <span key={k} className="rounded-[2px] border border-danger/40 bg-surface-2 px-2 py-0.5 font-mono text-[0.65rem] text-danger line-through">
                     {k}
                   </span>
                 ))}
@@ -247,13 +247,20 @@ export function ResultsView() {
             </Card>
           ) : (
             <div className="space-y-3">
-              {sortedPapers.map((p) => (
-                <PaperCard
+              {sortedPapers.map((p, index) => (
+                <div
                   key={p.id}
-                  paper={p}
-                  maxCitationsInResults={maxCitationsInResults}
-                  totalInResults={papers.length}
-                />
+                  style={{
+                    animation: "stagger-lift 0.3s ease-out both",
+                    animationDelay: `${Math.min(index * 0.04, 0.3)}s`,
+                  }}
+                >
+                  <PaperCard
+                    paper={p}
+                    maxCitationsInResults={maxCitationsInResults}
+                    totalInResults={papers.length}
+                  />
+                </div>
               ))}
             </div>
           )}
@@ -266,11 +273,15 @@ export function ResultsView() {
 function ResultsLoading() {
   return (
     <div className="mx-auto max-w-5xl px-4 sm:px-6 py-10">
-      <Card className="p-8 text-center mb-6 bg-emerald-500/5 border-emerald-500/20">
-        <Loader2 className="h-10 w-10 mx-auto text-emerald-600 dark:text-emerald-400 animate-spin mb-3" />
-        <h2 className="font-semibold mb-1">Searching across academic sources…</h2>
-        <p className="text-sm text-muted-foreground">
-          Querying Semantic Scholar, arXiv, Crossref, PubMed, OpenAlex, IEEE, bioRxiv, medRxiv &amp; Europe PMC in parallel.
+      <Card className="p-8 text-center mb-6 bg-surface border-border-2">
+        <div className="desk-loading-dots" aria-hidden="true">
+          <span className="loading-dot-1">·</span>
+          <span className="loading-dot-2">·</span>
+          <span className="loading-dot-3">·</span>
+        </div>
+        <h2 className="font-display text-xl font-normal text-text-primary mb-1">Searching across academic sources…</h2>
+        <p className="font-ui text-sm text-text-secondary font-light">
+          Querying Crossref, arXiv, Europe PMC, OpenAlex, and PubMed in parallel.
         </p>
       </Card>
       <div className="space-y-3">

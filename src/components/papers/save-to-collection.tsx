@@ -158,7 +158,7 @@ export function SaveToCollection({ paper, compact = false }: SaveToCollectionPro
                   style={{ backgroundColor: c.color }}
                 />
                 <span className="flex-1 truncate text-sm">{c.name}</span>
-                {isIn && <Check className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" />}
+                {isIn && <Check className="h-3.5 w-3.5 text-gold" />}
               </DropdownMenuItem>
             );
           })
@@ -175,14 +175,14 @@ export function SaveToCollection({ paper, compact = false }: SaveToCollectionPro
                 void handleCreateCollection();
               }
             }}
-            className="h-8 text-sm"
+            className="h-8 text-xs font-mono"
           />
           <Button
             size="sm"
             variant="default"
             onClick={handleCreateCollection}
             disabled={creating || !newCollectionName.trim()}
-            className="h-8 px-2 gap-1 bg-emerald-600 hover:bg-emerald-700 text-white"
+            className="h-8 px-2 gap-1"
           >
             <Plus className="h-3.5 w-3.5" />
           </Button>

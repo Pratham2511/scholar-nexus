@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useCallback, useRef, useEffect } from "react";
-import { Search, Sparkles, Loader2 } from "lucide-react";
+import { Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { useAppStore } from "@/store/app-store";
@@ -29,7 +29,7 @@ export function SearchBar({ hero = false, placeholder }: SearchBarProps) {
   const [local, setLocal] = useState(rawQuery);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
-  // V2: Typewriter animation for the placeholder
+  // Typewriter animation with blinking underscore
   const [typedPlaceholder, setTypedPlaceholder] = useState("");
   const [exampleIdx, setExampleIdx] = useState(0);
   const [charIdx, setCharIdx] = useState(0);
@@ -82,39 +82,38 @@ export function SearchBar({ hero = false, placeholder }: SearchBarProps) {
   };
 
   if (hero) {
-    // Build the placeholder text: use typed text if user hasn't typed, else static placeholder
     const dynamicPlaceholder = local
       ? (placeholder || "Describe what you're researching in natural language…")
-      : `e.g. ${typedPlaceholder}${!isDeleting && charIdx === TYPEWRITER_EXAMPLES[exampleIdx].length ? "" : "│"}`;
+      : `e.g. ${typedPlaceholder}${!isDeleting && charIdx === TYPEWRITER_EXAMPLES[exampleIdx].length ? "" : "_"}`;
 
     return (
       <div className="w-full">
-        <div className="relative rounded-2xl border border-border bg-card shadow-lg shadow-emerald-500/5 transition focus-within:border-emerald-500/50 focus-within:ring-2 focus-within:ring-emerald-500/20">
-          <Sparkles className="pointer-events-none absolute left-4 top-4 h-5 w-5 text-emerald-500" />
+        <div className="relative rounded-[3px] border border-border-2 bg-surface p-1 transition-[border-color,box-shadow] focus-within:border-gold focus-within:ring-1 focus-within:ring-gold">
+          <Search className="pointer-events-none absolute left-4 top-4 h-4 w-4 text-gold" />
           <Textarea
             ref={textareaRef}
             value={local}
             onChange={(e) => setLocal(e.target.value)}
             onKeyDown={handleKeyDown}
             placeholder={dynamicPlaceholder}
-            className="min-h-[120px] resize-none border-0 bg-transparent pl-12 pr-32 pt-4 text-base shadow-none focus-visible:ring-0 focus-visible:ring-offset-0"
+            className="min-h-[110px] resize-none border-0 bg-transparent pl-12 pr-32 pt-3 font-mono text-sm text-text-primary shadow-none focus-visible:ring-0 focus-visible:ring-offset-0"
             disabled={isSearching}
           />
           <div className="absolute bottom-3 right-3 flex items-center gap-2">
-            <span className="hidden text-xs text-muted-foreground sm:inline">
+            <span className="hidden font-mono text-[0.7rem] text-text-tertiary sm:inline">
               ⌘ + ↵
             </span>
             <Button
               onClick={handleSubmit}
               disabled={isSearching || !local.trim()}
-              className="gap-2 bg-emerald-600 hover:bg-emerald-700 text-white"
+              size="sm"
             >
               {isSearching ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
+                <span className="tracking-widest">···</span>
               ) : (
-                <Search className="h-4 w-4" />
+                <Search className="h-3.5 w-3.5" />
               )}
-              {isSearching ? "Searching…" : "Search"}
+              {isSearching ? "Searching" : "Search"}
             </Button>
           </div>
         </div>
@@ -126,7 +125,7 @@ export function SearchBar({ hero = false, placeholder }: SearchBarProps) {
   return (
     <div className="flex w-full items-center gap-2">
       <div className="relative flex-1">
-        <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+        <Search className="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-text-tertiary" />
         <input
           type="text"
           value={local}
@@ -135,22 +134,21 @@ export function SearchBar({ hero = false, placeholder }: SearchBarProps) {
             if (e.key === "Enter") void handleSubmit();
           }}
           placeholder={placeholder || "Search papers…"}
-          className="h-10 w-full rounded-md border border-border bg-background pl-10 pr-3 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-500"
+          className="h-9 w-full rounded-[2px] border border-border-2 bg-surface pl-9 pr-3 font-mono text-sm text-text-primary outline-none transition-colors focus:border-gold focus:ring-1 focus:ring-gold"
           disabled={isSearching}
         />
       </div>
       <Button
         onClick={handleSubmit}
         disabled={isSearching || !local.trim()}
-        className="gap-2 bg-emerald-600 hover:bg-emerald-700 text-white"
         size="sm"
       >
         {isSearching ? (
-          <Loader2 className="h-4 w-4 animate-spin" />
+          <span className="tracking-widest">···</span>
         ) : (
-          <Search className="h-4 w-4" />
+          <Search className="h-3.5 w-3.5" />
         )}
-        <span className="hidden sm:inline">Search</span>
+        <span className="hidden sm:inline">{isSearching ? "Searching" : "Search"}</span>
       </Button>
     </div>
   );

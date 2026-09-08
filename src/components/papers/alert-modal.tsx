@@ -69,8 +69,10 @@ export function AlertModal() {
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
+          <div className="flex h-10 w-10 items-center justify-center rounded-[2px] border border-border-2 bg-surface text-gold">
+            <Bell className="h-5 w-5" />
+          </div>
           <DialogTitle className="flex items-center gap-2">
-            <Bell className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
             Create Search Alert
           </DialogTitle>
           <DialogDescription>
@@ -129,7 +131,7 @@ export function AlertModal() {
           <Button
             onClick={handleCreate}
             disabled={creating || !rawQuery}
-            className="gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white"
+            className="gap-1.5"
           >
             {creating ? (
               <Loader2 className="h-4 w-4 animate-spin" />
