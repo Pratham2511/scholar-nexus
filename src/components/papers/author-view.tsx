@@ -129,7 +129,7 @@ export function AuthorView() {
           {/* Author header */}
           <Card className="p-6 mb-4">
             <div className="flex flex-wrap items-start gap-4">
-              <div className="flex h-14 w-14 items-center justify-center rounded-[2px] border border-border-2 bg-surface text-gold font-display text-2xl shrink-0">
+              <div className="flex h-14 w-14 items-center justify-center rounded-[2px] border border-border-2 bg-surface text-accent font-display text-2xl shrink-0">
                 {profile.name.charAt(0).toUpperCase()}
               </div>
               <div className="flex-1 min-w-0">
@@ -142,16 +142,16 @@ export function AuthorView() {
                 )}
                 <div className="flex flex-wrap gap-3 font-mono text-xs text-text-secondary">
                   <span className="flex items-center gap-1.5">
-                    <FileText className="h-3.5 w-3.5 text-gold" />
+                    <FileText className="h-3.5 w-3.5 text-accent" />
                     <strong className="text-text-primary font-medium">{profile.paperCount.toLocaleString()}</strong> papers
                   </span>
                   <span className="flex items-center gap-1.5">
-                    <Quote className="h-3.5 w-3.5 text-gold" />
+                    <Quote className="h-3.5 w-3.5 text-datum" />
                     <strong className="text-text-primary font-medium">{(profile.citationCount?.toLocaleString() ?? "Unknown")}</strong> citations
                   </span>
                   {profile.hIndex !== null && (
                     <span className="flex items-center gap-1.5">
-                      <Award className="h-3.5 w-3.5 text-gold" />
+                      <Award className="h-3.5 w-3.5 text-provenance" />
                       h-index: <strong className="text-text-primary font-medium">{profile.hIndex}</strong>
                     </span>
                   )}

@@ -158,7 +158,7 @@ export function SaveToCollection({ paper, compact = false }: SaveToCollectionPro
                   style={{ backgroundColor: c.color }}
                 />
                 <span className="flex-1 truncate text-sm">{c.name}</span>
-                {isIn && <Check className="h-3.5 w-3.5 text-gold" />}
+                {isIn && <Check className="h-3.5 w-3.5 text-provenance" />}
               </DropdownMenuItem>
             );
           })

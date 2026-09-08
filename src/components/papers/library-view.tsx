@@ -111,7 +111,7 @@ export function LibraryView() {
     <div className="mx-auto max-w-7xl px-4 sm:px-6 py-6">
       <div className="mb-6">
         <h1 className="font-display text-2xl font-normal text-text-primary flex items-center gap-2">
-          <Library className="h-5 w-5 text-gold" />
+          <Library className="h-5 w-5 text-accent" />
           {activeCollection ? activeCollection.name : "Saved Library"}
         </h1>
         <p className="font-ui text-sm text-text-secondary font-light mt-1">
@@ -128,10 +128,10 @@ export function LibraryView() {
       <div className="grid lg:grid-cols-[240px_1fr] gap-6">
         {/* Collections sidebar */}
         <div className="space-y-3">
-          <Card className="p-3.5 rounded-[3px] border-border bg-surface">
+          <Card className="p-3.5 rounded-[2px] border-border bg-surface">
             <div className="flex items-center justify-between mb-2">
               <h2 className="font-ui uppercase tracking-wider text-xs text-text-tertiary font-medium flex items-center gap-1.5">
-                <Folder className="h-3.5 w-3.5 text-gold" />
+                <Folder className="h-3.5 w-3.5 text-accent" />
                 Collections
               </h2>
             </div>
@@ -140,7 +140,7 @@ export function LibraryView() {
               onClick={() => setActiveCollectionId(null)}
               className={`w-full flex items-center justify-between gap-2 rounded-[2px] px-2 py-1.5 text-xs font-mono transition ${
                 !activeCollectionId
-                  ? "border-l-2 border-gold bg-surface-2 text-text-primary"
+                  ? "border-l-2 border-accent bg-surface-2 text-text-primary"
                   : "text-text-secondary hover:bg-surface-2 hover:text-text-primary"
               }`}
             >
@@ -156,7 +156,7 @@ export function LibraryView() {
                 key={c.id}
                 className={`group flex items-center justify-between gap-2 rounded-[2px] px-2 py-1.5 text-xs font-mono transition ${
                   activeCollectionId === c.id
-                    ? "border-l-2 border-gold bg-surface-2 text-text-primary"
+                    ? "border-l-2 border-accent bg-surface-2 text-text-primary"
                     : "text-text-secondary hover:bg-surface-2 hover:text-text-primary"
                 }`}
               >
@@ -209,7 +209,7 @@ export function LibraryView() {
         <div>
           {loading ? (
             <div className="flex items-center justify-center py-20">
-              <span className="font-mono text-xl text-gold tracking-widest">···</span>
+              <span className="font-mono text-xl text-accent tracking-widest">···</span>
             </div>
           ) : displayedPapers.length === 0 ? (
             <Card className="p-10 text-center">

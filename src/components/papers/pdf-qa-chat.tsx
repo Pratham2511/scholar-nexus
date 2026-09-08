@@ -135,10 +135,10 @@ export function PdfQaChat({ paperId, pdfUrl, paperTitle }: PdfQaChatProps) {
             className={`flex ${m.role === "user" ? "justify-end" : "justify-start"}`}
           >
             <div
-              className={`max-w-[85%] rounded-[3px] px-3.5 py-2 text-sm ${
+              className={`max-w-[85%] rounded-[2px] px-3.5 py-2 text-sm ${
                 m.role === "user"
-                  ? "bg-gold text-ground font-ui font-medium"
-                  : "bg-surface border border-border text-text-primary font-ui font-light"
+                  ? "bg-accent text-ground font-ui font-medium"
+                  : "bg-surface border border-border text-text-primary font-ui font-normal"
               }`}
             >
               {m.role === "assistant" && m.confidence && (
@@ -152,8 +152,8 @@ export function PdfQaChat({ paperId, pdfUrl, paperTitle }: PdfQaChatProps) {
         ))}
         {loading && (
           <div className="flex justify-start">
-            <div className="bg-surface border border-border rounded-[3px] px-3 py-2 flex items-center gap-2 text-xs font-mono text-text-tertiary">
-              <span className="tracking-widest text-gold">···</span>
+            <div className="bg-surface border border-border rounded-[2px] px-3 py-2 flex items-center gap-2 text-xs font-mono text-text-tertiary">
+              <span className="tracking-widest text-accent">···</span>
               Reading the PDF…
             </div>
           </div>
@@ -189,10 +189,10 @@ export function PdfQaChat({ paperId, pdfUrl, paperTitle }: PdfQaChatProps) {
 
 function ConfidenceBadge({ confidence }: { confidence: "high" | "medium" | "low" | "cached" }) {
   const map: Record<string, { label: string; className: string }> = {
-    high: { label: "High confidence", className: "text-green-bright border-green-bright/40" },
-    medium: { label: "Medium confidence", className: "text-gold border-gold/40" },
+    high: { label: "High confidence", className: "text-provenance border-provenance/40" },
+    medium: { label: "Medium confidence", className: "text-datum border-datum/40" },
     low: { label: "Low confidence", className: "text-danger border-danger/40" },
-    cached: { label: "Cached answer", className: "text-teal border-teal/40" },
+    cached: { label: "Cached answer", className: "text-link border-link/40" },
   };
   const cfg = map[confidence];
   return (

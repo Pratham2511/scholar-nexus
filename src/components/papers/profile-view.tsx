@@ -182,7 +182,7 @@ export function ProfileView() {
     <div className="mx-auto max-w-5xl px-4 sm:px-6 py-6 space-y-6">
       <div>
         <h1 className="font-display text-2xl font-normal text-text-primary flex items-center gap-2">
-          <User className="h-5 w-5 text-gold" />
+          <User className="h-5 w-5 text-accent" />
           Profile
         </h1>
         <p className="font-ui text-sm text-text-secondary font-light mt-1">
@@ -192,8 +192,8 @@ export function ProfileView() {
 
       {/* Stats row */}
       <div className="grid grid-cols-3 gap-3">
-        <Card className="p-4 flex items-center gap-3 rounded-[3px] border-border bg-surface">
-          <Bookmark className="h-6 w-6 text-gold" />
+        <Card className="p-4 flex items-center gap-3 rounded-[2px] border-border bg-surface">
+          <Bookmark className="h-6 w-6 text-provenance" />
           <div>
             <div className="font-display text-2xl font-normal text-text-primary">
               <CountUp end={data?.stats.savedCount ?? 0} />
@@ -201,8 +201,8 @@ export function ProfileView() {
             <div className="font-mono text-xs text-text-tertiary uppercase">Saved papers</div>
           </div>
         </Card>
-        <Card className="p-4 flex items-center gap-3 rounded-[3px] border-border bg-surface">
-          <History className="h-6 w-6 text-gold" />
+        <Card className="p-4 flex items-center gap-3 rounded-[2px] border-border bg-surface">
+          <History className="h-6 w-6 text-datum" />
           <div>
             <div className="font-display text-2xl font-normal text-text-primary">
               <CountUp end={data?.stats.searchCount ?? 0} />
@@ -210,8 +210,8 @@ export function ProfileView() {
             <div className="font-mono text-xs text-text-tertiary uppercase">Searches run</div>
           </div>
         </Card>
-        <Card className="p-4 flex items-center gap-3 rounded-[3px] border-border bg-surface">
-          <Quote className="h-6 w-6 text-gold" />
+        <Card className="p-4 flex items-center gap-3 rounded-[2px] border-border bg-surface">
+          <Quote className="h-6 w-6 text-accent" />
           <div>
             <div className="font-display text-2xl font-normal text-text-primary">
               <CountUp end={exports.length} />
@@ -311,9 +311,9 @@ export function ProfileView() {
 
       {/* AI recommendations */}
       {data && data.stats.savedCount > 0 && (
-        <Card className="p-5 bg-surface border-border-2 rounded-[3px]">
+        <Card className="p-5 bg-surface border-border-2 rounded-[2px]">
           <div className="flex items-center gap-2 mb-3">
-            <div className="flex h-8 w-8 items-center justify-center rounded-[2px] bg-surface-2 text-gold">
+            <div className="flex h-8 w-8 items-center justify-center rounded-[2px] bg-surface-2 text-accent">
               <Sparkles className="h-4 w-4" />
             </div>
             <h2 className="font-display text-xl font-normal text-text-primary">AI-Recommended Inquiries</h2>
@@ -321,7 +321,7 @@ export function ProfileView() {
           </div>
           {recommendations.length === 0 ? (
             <p className="font-ui text-sm text-text-secondary font-light flex items-center gap-1.5">
-              <Lightbulb className="h-3.5 w-3.5 text-gold" />
+              <Lightbulb className="h-3.5 w-3.5 text-datum" />
               {loadingRecs ? "Analyzing your saved papers…" : "No recommendations yet."}
             </p>
           ) : (
@@ -334,7 +334,7 @@ export function ProfileView() {
                     setView("results");
                     void import("@/lib/actions").then((m) => m.runSearch(t));
                   }}
-                  className="rounded-[2px] border border-border-2 bg-surface px-3 py-1 font-mono text-xs text-text-secondary hover:border-gold hover:text-gold transition duration-150"
+                  className="rounded-[2px] border border-border-2 bg-surface px-3 py-1 font-mono text-xs text-text-secondary hover:border-accent hover:text-accent transition duration-150"
                 >
                   {t}
                 </button>
@@ -345,9 +345,9 @@ export function ProfileView() {
       )}
 
       {/* Search Alerts */}
-      <Card className="p-5 rounded-[3px] border-border bg-surface">
+      <Card className="p-5 rounded-[2px] border-border bg-surface">
         <h2 className="font-display text-xl font-normal text-text-primary mb-3 flex items-center gap-2">
-          <Bell className="h-4 w-4 text-gold" />
+          <Bell className="h-4 w-4 text-accent" />
           Search Alerts
           {alerts.length > 0 && <Badge variant="secondary" className="text-xs">{alerts.length}</Badge>}
         </h2>
