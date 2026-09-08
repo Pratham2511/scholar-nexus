@@ -110,7 +110,7 @@ export function CompareView() {
             <tbody>
               <CompareRow label="Authors" icon={Users} render={(p) => p.authors.join(", ") || "—"} papers={comparePapers} winnerFor="authors" />
               <CompareRow label="Year" icon={Calendar} render={(p) => p.year?.toString() || "—"} papers={comparePapers} winnerFor="year" />
-              <CompareRow label="Citations" icon={Quote} render={(p) => p.citationCount.toLocaleString()} papers={comparePapers} winnerFor="citations" />
+              <CompareRow label="Citations" icon={Quote} render={(p) => (p.citationCount?.toLocaleString() ?? "Unknown")} papers={comparePapers} winnerFor="citations" />
               <CompareRow label="Publisher / Venue" icon={Award} render={(p) => p.publisher || p.venue || "—"} papers={comparePapers} />
               <CompareRow label="Paper Type" icon={FileText} render={(p) => p.paperType || "—"} papers={comparePapers} />
               <CompareRow label="Open Access" icon={Sparkles} render={(p) => p.openAccess ? "Yes" : "No"} papers={comparePapers} winnerFor="openAccess" />
@@ -169,7 +169,7 @@ function getWinnerIndex(attribute: string, papers: AcademicPaper[]): number {
 
   switch (attribute) {
     case "citations": {
-      const values = papers.map((p) => p.citationCount);
+      const values = papers.map((p) => p.citationCount ?? 0);
       const max = Math.max(...values);
       const winners = values.map((v, i) => (v === max ? i : -1)).filter((i) => i >= 0);
       if (winners.length === values.length) return -1; // all identical

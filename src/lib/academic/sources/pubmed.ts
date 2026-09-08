@@ -1,3 +1,4 @@
+import { providerFetch } from "../http";
 import type { AcademicPaper } from "../types";
 import { normalizeText, safeNumber, truncate, buildId, extractKeywords } from "../utils";
 
@@ -55,7 +56,7 @@ export async function searchPubmed(
   esearchUrl.searchParams.set("retmode", "json");
   esearchUrl.searchParams.set("sort", "relevance");
 
-  const esearchRes = await fetch(esearchUrl, { signal });
+  const esearchRes = await providerFetch(esearchUrl, { signal });
   if (!esearchRes.ok) {
     const text = await esearchRes.text().catch(() => "");
     throw new Error(`PubMed ESearch HTTP ${esearchRes.status}: ${truncate(text, 200)}`);
@@ -73,7 +74,7 @@ export async function searchPubmed(
   esummaryUrl.searchParams.set("id", ids.join(","));
   esummaryUrl.searchParams.set("retmode", "json");
 
-  const esummaryRes = await fetch(esummaryUrl, { signal });
+  const esummaryRes = await providerFetch(esummaryUrl, { signal });
   if (!esummaryRes.ok) {
     throw new Error(`PubMed ESummary HTTP ${esummaryRes.status}`);
   }

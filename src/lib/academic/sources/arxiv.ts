@@ -1,4 +1,6 @@
-import type { AcademicPaper } from "../types";
+import { providerFetch } from "../http";
+import { identifier } from "../query";
+import type { SearchFilters, AcademicPaper } from "../types";
 import { normalizeText, safeNumber, truncate, buildId, extractKeywords } from "../utils";
 
 interface ArxivAuthor {
@@ -39,17 +41,20 @@ export async function searchArxiv(
   query: string,
   limit = 20,
   signal?: AbortSignal,
+  filters: SearchFilters = {},
 ): Promise<AcademicPaper[]> {
   // Build a search query. arXiv supports field prefixes; we use "all:" for broad matching.
-  const q = query.trim().split(/\s+/).slice(0, 10).join(" AND ");
+  const q = (query.match(/"[^"\n]+"|\S+/g) || []).map(term => /^(AND|OR|ANDNOT)$/.test(term) || /^[a-z_]+:/.test(term) ? term : `all:${term}`).join(' AND ').replace(/ AND (AND|OR|ANDNOT) AND /g, ' $1 ');
   const url = new URL("https://export.arxiv.org/api/query");
-  url.searchParams.set("search_query", `all:${q}`);
+  const exact = identifier(query);
+  if (exact?.kind === 'arxiv') url.searchParams.set('id_list', exact.value);
+  else url.searchParams.set('search_query', q + (filters.yearFrom || filters.yearTo ? ` AND submittedDate:[${filters.yearFrom || 1991}01010000 TO ${filters.yearTo || new Date().getFullYear()}12312359]` : ''));
   url.searchParams.set("start", "0");
   url.searchParams.set("max_results", String(Math.min(limit, 50)));
   url.searchParams.set("sortBy", "relevance");
   url.searchParams.set("sortOrder", "descending");
 
-  const res = await fetch(url, {
+  const res = await providerFetch(url, {
     headers: { Accept: "application/atom+xml" },
     signal,
   });
@@ -59,7 +64,9 @@ export async function searchArxiv(
   }
 
   const xml = await res.text();
+  if (!xml.includes("<feed")) throw new Error("Malformed arXiv response");
   const entries = parseAtomEntries(xml);
+  if (entries.some(e => e.id?.includes("api/errors"))) throw new Error("arXiv rejected the query syntax");
   return entries.map((e) => mapArxivEntry(e));
 }
 
@@ -108,7 +115,7 @@ function parseAtomEntries(xml: string): ArxivEntry[] {
     if (authors.length) entry.author = authors;
 
     const links: ArxivLink[] = [];
-    const linkRegex = /<link\s+([^/]+?)\/>/g;
+    const linkRegex = /<link\s+([^>]+?)\/>/g;
     let lm: RegExpExecArray | null;
     while ((lm = linkRegex.exec(body))) {
       const attrs = lm[1];
@@ -133,7 +140,6 @@ function mapArxivEntry(e: ArxivEntry): AcademicPaper {
   const pdfLink =
     Array.isArray(e.link)
       ? e.link.find((l) => l["@type"] === "application/pdf")?.["@href"] ||
-        e.link.find((l) => l["@rel"] === "alternate")?.["@href"] ||
         null
       : e.link?.["@href"] || null;
   const absLink = arxivId ? `https://arxiv.org/abs/${arxivId}` : null;
@@ -147,8 +153,9 @@ function mapArxivEntry(e: ArxivEntry): AcademicPaper {
     abstract,
     year,
     doi,
+    identifiers: { arxiv: arxivId || undefined },
     pdfLink,
-    citationCount: 0, // arXiv doesn't return citations
+    citationCount: null, // Not supplied by arXiv
     publisher: "arXiv",
     sources: ["arXiv"],
     sourceUrls: absLink ? [{ source: "arXiv", url: absLink }] : [],

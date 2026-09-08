@@ -27,6 +27,17 @@ export function SaveToCollection({ paper, compact = false }: SaveToCollectionPro
   const [newCollectionName, setNewCollectionName] = useState("");
   const [creating, setCreating] = useState(false);
 
+  async function loadCollections() {
+    try {
+      const res = await fetch("/api/collections");
+      if (!res.ok) return;
+      const data = await res.json();
+      setCollections(data.collections || []);
+    } catch {
+      /* ignore */
+    }
+  }
+
   // Load collections on mount
   useEffect(() => {
     void loadCollections();
@@ -55,24 +66,15 @@ export function SaveToCollection({ paper, compact = false }: SaveToCollectionPro
     })();
   }, [collections, paper.id]);
 
-  async function loadCollections() {
-    try {
-      const res = await fetch("/api/collections");
-      if (!res.ok) return;
-      const data = await res.json();
-      setCollections(data.collections || []);
-    } catch {
-      /* ignore */
-    }
-  }
 
   const handleTogglePaperInCollection = async (collectionId: string) => {
     const isIn = paperCollectionIds.has(collectionId);
     try {
       if (isIn) {
-        await fetch(`/api/collections/paper?collectionId=${collectionId}&paperId=${encodeURIComponent(paper.id)}`, {
+        const response = await fetch(`/api/collections/paper?collectionId=${collectionId}&paperId=${encodeURIComponent(paper.id)}`, {
           method: "DELETE",
         });
+        if (!response.ok) throw new Error("Could not remove paper from collection");
         const next = new Set(paperCollectionIds);
         next.delete(collectionId);
         setPaperCollectionIds(next);

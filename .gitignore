@@ -97,3 +97,7 @@ tool-results/
 /download/
 .zscripts/dev.pid
 mini-services/.gitkeep
+
+# Local database backups
+*.dump
+*.sql.backup

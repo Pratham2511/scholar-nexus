@@ -1,144 +1,166 @@
 import { NextRequest, NextResponse } from "next/server";
-import { understandQuery } from "@/lib/ai/assistant";
-import { searchMultipleSources, DEFAULT_SOURCES } from "@/lib/academic/orchestrator";
-import type { SearchFilters } from "@/lib/academic/types";
-import { ensureLocalUser, getLocalUserId } from "@/lib/user";
-import { db } from "@/lib/db";
+import { z } from "zod";
+import {
+  searchMultipleSources,
+  DEFAULT_SOURCES,
+  PROVIDERS,
+} from "@/lib/academic/orchestrator";
+import { prepareQuery } from "@/lib/academic/query";
 import {
   checkRateLimit,
   rateLimitedResponse,
   readJsonBody,
-  truncate,
-  MAX_QUERY_LENGTH,
 } from "@/lib/security";
-
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
-// Vercel free tier default is 10s — too short for 9-source parallel search (12s per-source timeout).
-// Extend to 60s (max for Hobby tier). Ignored on self-hosted Node servers.
-export const maxDuration = 60;
-
-interface SearchRequestBody {
-  query: string;
-  filters?: SearchFilters;
-  sources?: string[];
-  limit?: number;
-  /** V2 — toggle agentic query expansion (default: true) */
-  expandQuery?: boolean;
+const schema = z
+  .object({
+    query: z.string().trim().min(1).max(1000),
+    filters: z
+      .object({
+        yearFrom: z.number().int().min(1800).max(2100).optional(),
+        yearTo: z.number().int().min(1800).max(2100).optional(),
+        author: z.string().max(200).optional(),
+        publisher: z.string().max(200).optional(),
+        minCitations: z.number().int().min(0).max(10000000).optional(),
+        openAccessOnly: z.boolean().optional(),
+        includeKeywords: z.array(z.string().max(100)).max(20).optional(),
+        excludeKeywords: z.array(z.string().max(100)).max(20).optional(),
+        paperType: z.string().max(100).optional(),
+      })
+      .default({}),
+    sources: z
+      .array(z.string().refine((s) => s in PROVIDERS))
+      .min(1)
+      .max(7)
+      .optional(),
+    limit: z.number().int().min(1).max(50).default(20),
+    cursor: z.string().max(100).optional(),
+  })
+  .refine(
+    (b) =>
+      !b.filters.yearFrom ||
+      !b.filters.yearTo ||
+      b.filters.yearFrom <= b.filters.yearTo,
+    "Start year must not exceed end year",
+  );
+type Snapshot = Awaited<ReturnType<typeof searchMultipleSources>>;
+const sessions = new Map<
+  string,
+  { key: string; result: Snapshot; expires: number }
+>();
+const inFlight = new Map<
+  string,
+  { promise: Promise<Snapshot>; controller: AbortController; users: number }
+>();
+function page(result: Snapshot, id: string, offset: number, limit: number) {
+  return {
+    ...result,
+    papers: result.papers.slice(offset, offset + limit),
+    cursor:
+      offset + limit < result.papers.length ? `${id}:${offset + limit}` : null,
+  };
 }
-
-// Search is expensive (AI + 9-27 outbound API calls). Limit aggressively.
-const RATE_LIMIT = { max: 20, windowMs: 60_000 }; // 20 searches / minute / IP
-
-/**
- * POST /api/search
- * Body: { query: string, filters?: SearchFilters, sources?: string[], limit?: number, expandQuery?: boolean }
- *
- * Runs the full pipeline:
- *  1. AI query understanding
- *  2. Multi-source parallel search (V2: with agentic query expansion across up to 3 search terms)
- *  3. Normalization (done in adapters)
- *  4. Deduplication
- *  5. Filter application
- *  6. Intelligent ranking
- * Returns ranked papers + per-source diagnostics.
- */
 export async function POST(req: NextRequest) {
-  // Rate limit check
-  const rl = checkRateLimit(req, RATE_LIMIT);
+  const rl = checkRateLimit(req, { max: 30, windowMs: 60000 });
   if (!rl.ok) return rateLimitedResponse(rl);
-
-  // Body size guard + safe JSON parse
-  const bodyResult = await readJsonBody<SearchRequestBody>(req);
-  if (!bodyResult.ok) return bodyResult.response;
-  const body = bodyResult.data;
-
-  // Validate query
-  const query = typeof body.query === "string" ? body.query.trim() : "";
-  if (query.length === 0) {
-    return NextResponse.json({ error: "Missing or invalid 'query' field" }, { status: 400 });
-  }
-  if (query.length > MAX_QUERY_LENGTH) {
+  const body = await readJsonBody(req);
+  if (!body.ok) return body.response;
+  const parsed = schema.safeParse(body.data);
+  if (!parsed.success)
     return NextResponse.json(
-      { error: `Query too long (max ${MAX_QUERY_LENGTH} chars)` },
+      {
+        error: "Invalid search request",
+        details: parsed.error.issues.map((i) => i.message),
+      },
       { status: 400 },
     );
+  const {
+    query,
+    filters,
+    sources = [...DEFAULT_SOURCES],
+    limit,
+    cursor,
+  } = parsed.data;
+  const key = JSON.stringify({ query, filters, sources: [...sources].sort() });
+  for (const [id, s] of sessions)
+    if (s.expires < Date.now()) sessions.delete(id);
+  if (cursor) {
+    const [id, raw] = cursor.split(":");
+    const offset = Number(raw);
+    const session = sessions.get(id);
+    if (
+      !session ||
+      session.key !== key ||
+      !Number.isInteger(offset) ||
+      offset < 0
+    )
+      return NextResponse.json(
+        { error: "Search snapshot expired or changed. Run the search again." },
+        { status: 410 },
+      );
+    return NextResponse.json(page(session.result, id, offset, limit));
   }
-
-  try {
-    // Sanitize filters — only accept known fields with sane types
-    const filters: SearchFilters = {
-      yearFrom: sanitizeYear(body.filters?.yearFrom),
-      yearTo: sanitizeYear(body.filters?.yearTo),
-      author: body.filters?.author ? truncate(body.filters.author, 200) : undefined,
-      publisher: body.filters?.publisher ? truncate(body.filters.publisher, 200) : undefined,
-      minCitations: sanitizeInt(body.filters?.minCitations, 0, 100_000),
-      openAccessOnly: !!body.filters?.openAccessOnly,
-      includeKeywords: Array.isArray(body.filters?.includeKeywords)
-        ? body.filters!.includeKeywords.slice(0, 20).map((k) => truncate(String(k), 100))
-        : [],
-      excludeKeywords: Array.isArray(body.filters?.excludeKeywords)
-        ? body.filters!.excludeKeywords.slice(0, 20).map((k) => truncate(String(k), 100))
-        : [],
-      paperType: body.filters?.paperType ? truncate(body.filters.paperType, 100) : undefined,
+  for (const [id, s] of sessions)
+    if (s.key === key) return NextResponse.json(page(s.result, id, 0, limit));
+  let job = inFlight.get(key);
+  if (job?.controller.signal.aborted) {
+    inFlight.delete(key);
+    job = undefined;
+  }
+  if (!job) {
+    if (inFlight.size >= 10)
+      return NextResponse.json(
+        { error: "Search queue is full. Please retry shortly." },
+        { status: 503 },
+      );
+    const controller = new AbortController();
+    job = {
+      controller,
+      users: 0,
+      promise: searchMultipleSources(prepareQuery(query, filters), {
+        sources,
+        signal: controller.signal,
+      }),
     };
-
-    // Validate sources list — only accept known source names
-    const ALLOWED_SOURCES = new Set<string>([
-      "Semantic Scholar", "arXiv", "Crossref", "PubMed", "OpenAlex",
-      "IEEE Xplore", "bioRxiv", "medRxiv", "Europe PMC", "CORE",
-    ]);
-    const sources = Array.isArray(body.sources) && body.sources.length > 0
-      ? body.sources.filter((s) => typeof s === "string" && ALLOWED_SOURCES.has(s))
-      : [...DEFAULT_SOURCES];
-    if (sources.length === 0) sources.push(...DEFAULT_SOURCES);
-
-    const limit = Math.min(Math.max(body.limit || 50, 5), 100);
-    const expandQuery = body.expandQuery !== false; // default true
-
-    // Step 1: AI query understanding
-    const understood = await understandQuery(query, filters);
-
-    // Step 2-6: Multi-source search + dedupe + filter + rank
-    const result = await searchMultipleSources(understood, {
-      finalLimit: limit,
-      sources,
-      expandQuery,
-    });
-
-    // Persist search history in the background (fire-and-forget, no await)
-    void persistSearchHistory(query, filters, result.totalFound).catch((e) => {
-      console.error("[search] failed to persist history:", e);
-    });
-
-    return NextResponse.json(result);
-  } catch (err) {
-    console.error("[search] error:", err);
-    const message = err instanceof Error ? err.message : "Unknown error";
-    return NextResponse.json({ error: message }, { status: 500 });
+    inFlight.set(key, job);
+  }
+  job.users++;
+  let released = false;
+  const release = () => {
+    if (!released) {
+      released = true;
+      if (--job!.users === 0) job!.controller.abort();
+    }
+  };
+  req.signal.addEventListener("abort", release, { once: true });
+  if (req.signal.aborted) release();
+  try {
+    const result = await job.promise;
+    if (result.error) return NextResponse.json(result, { status: 503 });
+    const id = crypto.randomUUID();
+    if (sessions.size >= 30) sessions.delete(sessions.keys().next().value!);
+    sessions.set(id, { key, result, expires: Date.now() + 300000 });
+    return NextResponse.json(page(result, id, 0, limit));
+  } catch {
+    return NextResponse.json(
+      { error: "Search was interrupted. Please retry." },
+      { status: 503 },
+    );
+  } finally {
+    req.signal.removeEventListener("abort", release);
+    release();
+    if (inFlight.get(key) === job) inFlight.delete(key);
   }
 }
-
-function sanitizeYear(v: unknown): number | undefined {
-  if (typeof v !== "number" || !Number.isFinite(v)) return undefined;
-  const y = Math.floor(v);
-  if (y < 1900 || y > 2100) return undefined;
-  return y;
-}
-
-function sanitizeInt(v: unknown, min: number, max: number): number | undefined {
-  if (typeof v !== "number" || !Number.isFinite(v)) return undefined;
-  return Math.min(Math.max(Math.floor(v), min), max);
-}
-
-async function persistSearchHistory(query: string, filters: SearchFilters, resultCount: number) {
-  await ensureLocalUser();
-  await db.searchHistory.create({
-    data: {
-      userId: getLocalUserId(),
-      query,
-      filters: JSON.stringify(filters),
-      resultCount,
-    },
+export async function GET() {
+  return NextResponse.json({
+    providers: Object.entries(PROVIDERS).map(([name, p]) => ({
+      name,
+      configured: !p.key || !!process.env[p.key],
+      requiredKey: p.key,
+      upstreamFilters: p.filters,
+    })),
+    defaults: DEFAULT_SOURCES,
   });
 }

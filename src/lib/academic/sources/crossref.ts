@@ -1,4 +1,6 @@
-import type { AcademicPaper } from "../types";
+import { providerFetch } from "../http";
+import { identifier } from "../query";
+import type { SearchFilters, AcademicPaper } from "../types";
 import { normalizeText, safeNumber, truncate, buildId, extractKeywords } from "../utils";
 
 interface CrossrefAuthor {
@@ -42,19 +44,27 @@ export async function searchCrossref(
   query: string,
   limit = 20,
   signal?: AbortSignal,
+  filters: SearchFilters = {},
 ): Promise<AcademicPaper[]> {
   const url = new URL("https://api.crossref.org/works");
   url.searchParams.set("query", query);
   url.searchParams.set("rows", String(Math.min(limit, 50)));
   url.searchParams.set("select", "DOI,title,author,abstract,published-print,published-online,issued,created,is-referenced-by-count,publisher,type,link,license,subject,container-title,short-container-title");
-  url.searchParams.set("sort", "is-referenced-by-count");
-  url.searchParams.set("order", "desc");
-  url.searchParams.set("mailto", "research-assistant@example.com");
+  const exact = identifier(query);
+  if (exact?.kind === 'doi') { url.pathname += '/' + encodeURIComponent(exact.value); url.search = ''; }
+  else {
+    const terms = [filters.yearFrom && `from-pub-date:${filters.yearFrom}-01-01`, filters.yearTo && `until-pub-date:${filters.yearTo}-12-31`].filter(Boolean);
+    if (terms.length) url.searchParams.set('filter', terms.join(','));
+    if (filters.author) url.searchParams.set('query.author', filters.author);
+    url.searchParams.set('sort', 'relevance');
+  }
+  if (process.env.ACADEMIC_CONTACT_EMAIL) url.searchParams.set('mailto', process.env.ACADEMIC_CONTACT_EMAIL);
 
-  const res = await fetch(url, {
-    headers: { Accept: "application/json", "User-Agent": "ResearchAssistant/1.0 (mailto:research-assistant@example.com)" },
+  const res = await providerFetch(url, {
+    headers: { Accept: "application/json", "User-Agent": "ScholarNexus/3.0" },
     signal,
   });
+  if (res.status === 404 && exact) return [];
   if (!res.ok) {
     const text = await res.text().catch(() => "");
     throw new Error(`Crossref HTTP ${res.status}: ${truncate(text, 200)}`);
@@ -63,7 +73,8 @@ export async function searchCrossref(
   const json = (await res.json()) as CrossrefResponse;
   if (json.error) throw new Error(`Crossref error: ${json.error}`);
 
-  const items = json.message?.items || [];
+  if (!json.message || (!exact && !Array.isArray(json.message.items))) throw new Error('Malformed Crossref response');
+  const items = exact?.kind === 'doi' ? [json.message as CrossrefItem] : json.message.items!;
   return items.map((item) => mapCrossrefItem(item));
 }
 
@@ -75,7 +86,6 @@ function mapCrossrefItem(item: CrossrefItem): AcademicPaper {
   const year = pickYear(item);
   const doi = item.DOI ?? null;
   const pdfLink = item.link?.find((l) => l["content-type"] === "application/pdf")?.URL ||
-    item.link?.[0]?.URL ||
     null;
   const publisher = item.publisher || item["container-title"]?.[0] || null;
   const licenseStart = item.license?.[0]?.start?.["date-parts"]?.[0]?.[0];
@@ -89,13 +99,14 @@ function mapCrossrefItem(item: CrossrefItem): AcademicPaper {
     abstract,
     year,
     doi,
+    identifiers: { doi: doi || undefined },
     pdfLink,
-    citationCount: safeNumber(item["is-referenced-by-count"], 0),
+    citationCount: item["is-referenced-by-count"] ?? null,
     publisher,
     sources: ["Crossref"],
     sourceUrls: sourceUrl ? [{ source: "Crossref", url: sourceUrl }] : [],
     keywords: (item.subject || []).slice(0, 8).map((s) => s.toLowerCase()),
-    openAccess: isOpen,
+    openAccess: isOpen ? true : null,
     paperType: item.type || null,
     venue: item["container-title"]?.[0] || item["short-container-title"]?.[0] || null,
   };

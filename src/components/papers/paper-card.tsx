@@ -29,9 +29,9 @@ interface PaperCardProps {
   paper: AcademicPaper;
   /** When true, render a compact one-line variant. */
   compact?: boolean;
-  /** Optional max citations in current result set — used for percentile badge */
+  /** Optional max citations in current result set — legacy metadata */
   maxCitationsInResults?: number;
-  /** Optional total papers in results — used for percentile calculation */
+  /** Optional total papers in results — legacy metadata */
   totalInResults?: number;
 }
 
@@ -52,19 +52,7 @@ export function PaperCard({
   const isSaved = savedIds.has(paper.id);
   const inCompare = compareIds.has(paper.id);
 
-  // V2: Compute citation percentile badge
-  const percentileBadge = useMemo(() => {
-    if (!paper.citationCount || !maxCitationsInResults || !totalInResults || totalInResults < 5) {
-      return null;
-    }
-    // Percentile = % of papers in results with FEWER citations
-    // We can't compute exactly without all papers, so estimate from max
-    const ratio = paper.citationCount / maxCitationsInResults;
-    if (ratio >= 0.9) return { label: "Top 1%", className: "bg-amber-500/10 text-amber-700 dark:text-amber-300 border-amber-500/30" };
-    if (ratio >= 0.7) return { label: "Top 10%", className: "bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border-emerald-500/30" };
-    if (ratio >= 0.4) return { label: "Top 25%", className: "bg-blue-500/10 text-blue-700 dark:text-blue-300 border-blue-500/30" };
-    return null;
-  }, [paper.citationCount, maxCitationsInResults, totalInResults]);
+
 
   const handleSave = async (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -138,12 +126,7 @@ export function PaperCard({
               Open Access
             </Badge>
           )}
-          {percentileBadge && (
-            <Badge variant="outline" className={`text-xs gap-0.5 ${percentileBadge.className}`}>
-              <TrendingUp className="h-2.5 w-2.5" />
-              {percentileBadge.label}
-            </Badge>
-          )}
+
         </div>
         {/* V2: Relevance score visual bar */}
         {typeof score === "number" && (
@@ -200,10 +183,10 @@ export function PaperCard({
             {paper.year}
           </span>
         )}
-        {paper.citationCount > 0 && (
+        {(paper.citationCount ?? 0) > 0 && (
           <span className="flex items-center gap-1">
             <Quote className="h-3 w-3" />
-            {paper.citationCount.toLocaleString()} citations
+            {(paper.citationCount?.toLocaleString() ?? "Unknown")} citations
           </span>
         )}
         {paper.publisher && (

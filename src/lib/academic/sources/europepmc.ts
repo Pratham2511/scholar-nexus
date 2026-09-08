@@ -1,4 +1,6 @@
-import type { AcademicPaper } from "../types";
+import { providerFetch } from "../http";
+import { identifier } from "../query";
+import type { SearchFilters, AcademicPaper } from "../types";
 import { normalizeText, safeNumber, truncate, buildId } from "../utils";
 
 interface EuropePmcAuthor {
@@ -45,32 +47,33 @@ export async function searchEuropePMC(
   query: string,
   limit = 20,
   signal?: AbortSignal,
+  filters: SearchFilters = {},
 ): Promise<AcademicPaper[]> {
   const url = new URL("https://www.ebi.ac.uk/europepmc/webservices/rest/search");
-  url.searchParams.set("query", query);
+  const exact = identifier(query);
+  const q = exact?.kind === 'doi' ? `DOI:"${exact.value}"` : query;
+  url.searchParams.set('query', `(${q})` + (filters.yearFrom || filters.yearTo ? ` AND FIRST_PDATE:[${filters.yearFrom || 1800}-01-01 TO ${filters.yearTo || new Date().getFullYear()}-12-31]` : '') + (filters.openAccessOnly ? ' AND OPEN_ACCESS:Y' : ''));
   url.searchParams.set("resultType", "core");
   url.searchParams.set("pageSize", String(Math.min(limit, 50)));
   url.searchParams.set("format", "json");
-  url.searchParams.set("sort", "CITED desc");
 
-  const res = await fetch(url, {
+
+  const res = await providerFetch(url, {
     headers: { Accept: "application/json" },
     signal,
   });
 
   if (!res.ok) {
     const text = await res.text().catch(() => "");
-    if (res.status === 429) {
-      console.warn("[Europe PMC] rate-limited (HTTP 429), skipping source.");
-      return [];
-    }
+
     throw new Error(`Europe PMC HTTP ${res.status}: ${truncate(text, 200)}`);
   }
 
   const json = (await res.json()) as EuropePmcResponse;
   if (json.error) throw new Error(`Europe PMC error: ${json.error}`);
 
-  const results = json.resultList?.result || [];
+  if (!Array.isArray(json.resultList?.result)) throw new Error("Malformed Europe PMC response");
+  const results = json.resultList.result;
   return results.map((r) => mapEuropePmcResult(r));
 }
 
@@ -135,13 +138,14 @@ function mapEuropePmcResult(r: EuropePmcResult): AcademicPaper {
     abstract,
     year,
     doi,
+    identifiers: { doi: doi || undefined, pmid: pmid || undefined, pmcid: pmcid || undefined },
     pdfLink,
-    citationCount: safeNumber(r.citedByCount, 0),
+    citationCount: r.citedByCount == null ? null : safeNumber(r.citedByCount),
     publisher: r.journalTitle || r.source || "Europe PMC",
     sources: ["Europe PMC"],
     sourceUrls: sourceUrl ? [{ source: "Europe PMC", url: sourceUrl }] : [],
     keywords,
-    openAccess: r.isOpenAccess === "Y",
+    openAccess: r.isOpenAccess == null ? null : r.isOpenAccess === "Y",
     paperType,
     venue: r.journalTitle || null,
   };

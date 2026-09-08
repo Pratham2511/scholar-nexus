@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { fetchCitationGraph } from "@/lib/ai/assistant";
+import { fetchCitationGraph } from "@/lib/academic/citations";
 import type { CitationGraph } from "@/lib/academic/types";
 import {
   checkRateLimit,

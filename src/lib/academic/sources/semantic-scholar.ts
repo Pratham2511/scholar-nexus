@@ -1,3 +1,4 @@
+import { providerFetch } from "../http";
 import type { AcademicPaper } from "../types";
 import { normalizeText, safeNumber, truncate, buildId } from "../utils";
 
@@ -57,27 +58,24 @@ export async function searchSemanticScholar(
   url.searchParams.set("query", query);
   url.searchParams.set("limit", String(Math.min(limit, 100)));
   url.searchParams.set("fields", fields);
-  url.searchParams.set("sort", "citationCount:desc");
 
-  const res = await fetch(url, {
-    headers: { Accept: "application/json" },
+
+  const res = await providerFetch(url, {
+    headers: { Accept: "application/json", ...(process.env.SEMANTIC_SCHOLAR_API_KEY ? { "x-api-key": process.env.SEMANTIC_SCHOLAR_API_KEY } : {}) },
     signal,
   });
 
   if (!res.ok) {
     const text = await res.text().catch(() => "");
-    if (res.status === 429) {
-      // Rate-limited — return empty gracefully rather than failing the whole search
-      console.warn("[Semantic Scholar] rate-limited (HTTP 429), skipping source.");
-      return [];
-    }
+
     throw new Error(`Semantic Scholar HTTP ${res.status}: ${truncate(text, 200)}`);
   }
 
   const json = (await res.json()) as SemanticScholarResponse;
   if (json.error) throw new Error(`Semantic Scholar error: ${json.error}`);
 
-  const papers = (json.data || []).filter((p) => p.title);
+  if (!Array.isArray(json.data)) throw new Error("Malformed Semantic Scholar response");
+  const papers = json.data.filter((p) => p.title);
 
   return papers.map((p) => {
     const title = normalizeText(p.title);
@@ -94,13 +92,14 @@ export async function searchSemanticScholar(
       abstract,
       year: typeof p.year === "number" ? p.year : null,
       doi,
+      identifiers: { semanticScholar: p.paperId || undefined, doi: doi || undefined, arxiv: p.externalIds?.ArXiv, pmid: p.externalIds?.PubMed },
       pdfLink: p.openAccessPdf?.url ?? null,
-      citationCount: safeNumber(p.citationCount, 0),
+      citationCount: p.citationCount ?? null,
       publisher: p.publicationVenue?.name || p.journal?.name || p.venue || null,
       sources: ["Semantic Scholar"],
       sourceUrls: sourceUrl ? [{ source: "Semantic Scholar", url: sourceUrl }] : [],
       keywords: (p.fieldsOfStudy?.filter(Boolean) as string[] | []) ?? [],
-      openAccess: !!p.isOpenAccess,
+      openAccess: p.isOpenAccess ?? null,
       paperType: p.publicationTypes?.[0] ?? null,
       venue: p.venue || p.publicationVenue?.name || null,
     };

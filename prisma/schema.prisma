@@ -46,6 +46,7 @@ model SavedPaper {
   source      String?
   keywords    String?
   openAccess  Boolean  @default(false)
+  metadata    String?
   aiSummary   String?
   savedAt     DateTime @default(now())
 
@@ -53,6 +54,7 @@ model SavedPaper {
 
   @@index([userId])
   @@index([paperId])
+  @@unique([userId, paperId])
 }
 
 model SearchHistory {
@@ -121,6 +123,7 @@ model CollectionPaper {
 
   @@index([collectionId])
   @@index([paperId])
+  @@unique([collectionId, paperId])
 }
 
 // ──────────────────────────────────────────────────────────────────────────
@@ -155,4 +158,12 @@ model PaperQA {
 
   @@index([userId])
   @@index([paperId])
+}
+
+// Single-user local research workspace. Revision prevents silent lost updates.
+model ResearchWorkspace {
+  id        String @id @default("local")
+  revision  Int @default(0)
+  data      String
+  updatedAt DateTime @updatedAt
 }

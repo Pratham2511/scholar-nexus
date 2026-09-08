@@ -1,3 +1,4 @@
+import { providerFetch } from "../http";
 import type { AcademicPaper } from "../types";
 import { normalizeText, safeNumber, truncate, buildId, extractKeywords } from "../utils";
 
@@ -54,39 +55,31 @@ export async function searchIEEE(
   const apiKey = process.env.IEEE_API_KEY;
   if (!apiKey) {
     // Graceful skip — no API key configured.
-    return [];
+    throw new Error("IEEE_API_KEY is not configured");
   }
 
   const url = new URL("https://ieeexploreapi.ieee.org/api/v1/search/articles");
   url.searchParams.set("querytext", query);
   url.searchParams.set("max_records", String(Math.min(limit, 50)));
   url.searchParams.set("apikey", apiKey);
-  url.searchParams.set("sort_field", "article_citation_count");
-  url.searchParams.set("sort_order", "desc");
   url.searchParams.set("output_format", "json");
 
-  const res = await fetch(url, {
+  const res = await providerFetch(url, {
     headers: { Accept: "application/json" },
     signal,
   });
 
   if (!res.ok) {
     const text = await res.text().catch(() => "");
-    if (res.status === 429) {
-      console.warn("[IEEE Xplore] rate-limited (HTTP 429), skipping source.");
-      return [];
-    }
-    if (res.status === 401 || res.status === 403) {
-      console.warn("[IEEE Xplore] invalid API key, skipping source.");
-      return [];
-    }
+
     throw new Error(`IEEE Xplore HTTP ${res.status}: ${truncate(text, 200)}`);
   }
 
   const json = (await res.json()) as IeeeResponse;
   if (json.error) throw new Error(`IEEE Xplore error: ${json.error}`);
 
-  const articles = json.articles || [];
+  if (!Array.isArray(json.articles)) throw new Error("Malformed IEEE response");
+  const articles = json.articles;
   return articles.map((a) => mapIeeeArticle(a));
 }
 

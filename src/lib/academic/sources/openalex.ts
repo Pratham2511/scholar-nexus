@@ -1,3 +1,4 @@
+import { providerFetch } from "../http";
 import type { AcademicPaper } from "../types";
 import { normalizeText, safeNumber, truncate, buildId } from "../utils";
 
@@ -29,8 +30,9 @@ interface OpenAlexWork {
   primary_location?: OpenAlexLocation;
   best_oa_location?: OpenAlexLocation;
   open_access?: { is_oa?: boolean };
-  concepts?: OpenAlexConcept[];
+  topics?: OpenAlexConcept[];
   type?: string;
+  is_retracted?: boolean;
 }
 
 interface OpenAlexResponse {
@@ -69,7 +71,7 @@ const TYPE_MAP: Record<string, string> = {
 };
 
 /**
- * Search OpenAlex — 474M+ works, no API key required.
+ * Search OpenAlex with explicitly configured optional credentials.
  * Docs: https://docs.openalex.org/api-entities/works/search-works
  * Add mailto to join the polite pool (faster responses).
  */
@@ -80,36 +82,35 @@ export async function searchOpenAlex(
 ): Promise<AcademicPaper[]> {
   const url = new URL("https://api.openalex.org/works");
   url.searchParams.set("search", query);
-  url.searchParams.set("sort", "cited_by_count:desc");
+
   url.searchParams.set("per_page", String(Math.min(limit, 50)));
   url.searchParams.set(
     "select",
-    "id,title,display_name,authorships,publication_year,doi,abstract_inverted_index,cited_by_count,primary_location,best_oa_location,open_access,concepts,type",
+    "id,title,display_name,authorships,publication_year,doi,abstract_inverted_index,cited_by_count,primary_location,best_oa_location,open_access,topics,type,is_retracted",
   );
   // Polite pool: include mailto
-  url.searchParams.set("mailto", "scholarai@research.local");
+  if (process.env.OPENALEX_API_KEY) url.searchParams.set("api_key", process.env.OPENALEX_API_KEY);
+  if (process.env.ACADEMIC_CONTACT_EMAIL) url.searchParams.set("mailto", process.env.ACADEMIC_CONTACT_EMAIL);
 
-  const res = await fetch(url, {
+  const res = await providerFetch(url, {
     headers: {
       Accept: "application/json",
-      "User-Agent": "ScholarAI/2.0 (mailto:scholarai@research.local)",
+      "User-Agent": "ScholarNexus/3.0",
     },
     signal,
   });
 
   if (!res.ok) {
     const text = await res.text().catch(() => "");
-    if (res.status === 429) {
-      console.warn("[OpenAlex] rate-limited (HTTP 429), skipping source.");
-      return [];
-    }
+
     throw new Error(`OpenAlex HTTP ${res.status}: ${truncate(text, 200)}`);
   }
 
   const json = (await res.json()) as OpenAlexResponse;
   if (json.error) throw new Error(`OpenAlex error: ${json.error}`);
 
-  const results = json.results || [];
+  if (!Array.isArray(json.results)) throw new Error("Malformed OpenAlex response");
+  const results = json.results;
   return results.map((w) => mapOpenAlexWork(w));
 }
 
@@ -123,13 +124,13 @@ function mapOpenAlexWork(w: OpenAlexWork): AcademicPaper {
   const doi = doiRaw ? doiRaw.replace(/^https?:\/\/doi\.org\//i, "") : null;
   const pdfLink =
     w.best_oa_location?.pdf_url ||
-    w.primary_location?.landing_page_url ||
+    w.primary_location?.pdf_url ||
     null;
   const sourceName = "OpenAlex";
   const openAlexId = w.id?.split("/").pop() || null;
   const sourceUrl = w.id || (openAlexId ? `https://openalex.org/${openAlexId}` : null);
   const publisher = w.primary_location?.source?.display_name || null;
-  const concepts = (w.concepts || [])
+  const topics = (w.topics || [])
     .filter((c) => c.display_name)
     .sort((a, b) => (b.score || 0) - (a.score || 0))
     .slice(0, 5)
@@ -144,13 +145,15 @@ function mapOpenAlexWork(w: OpenAlexWork): AcademicPaper {
     abstract,
     year,
     doi,
+    identifiers: { openalex: openAlexId || undefined, doi: doi || undefined },
     pdfLink,
-    citationCount: safeNumber(w.cited_by_count, 0),
+    citationCount: w.cited_by_count ?? null,
     publisher,
     sources: [sourceName],
     sourceUrls: sourceUrl ? [{ source: sourceName, url: sourceUrl }] : [],
-    keywords: concepts,
-    openAccess: !!w.open_access?.is_oa,
+    keywords: topics,
+    integrityNotices: w.is_retracted === true && sourceUrl ? [{ kind: "retraction", source: "OpenAlex", url: sourceUrl, retrievedAt: new Date().toISOString() }] : [],
+    openAccess: w.open_access?.is_oa ?? null,
     paperType: w.type ? (TYPE_MAP[w.type] || w.type) : null,
     venue: publisher,
   };

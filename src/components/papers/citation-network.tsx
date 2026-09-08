@@ -221,10 +221,10 @@ function NeighborCard({
       )}
       <div className="flex items-center gap-3 text-xs text-muted-foreground mb-2">
         {neighbor.year && <span>{neighbor.year}</span>}
-        {neighbor.citationCount > 0 && (
+        {(neighbor.citationCount ?? 0) > 0 && (
           <span className="flex items-center gap-1">
             <Quote className="h-3 w-3" />
-            {neighbor.citationCount.toLocaleString()}
+            {(neighbor.citationCount?.toLocaleString() ?? "Unknown")}
           </span>
         )}
         {neighbor.venue && <span className="truncate">{neighbor.venue}</span>}

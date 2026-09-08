@@ -164,7 +164,7 @@ export function NetworkView() {
       )
       .force("charge", d3.forceManyBody().strength(-180))
       .force("center", d3.forceCenter(width / 2, height / 2))
-      .force("collision", d3.forceCollide<SimNode>().radius((d) => size(d.citationCount) + 6));
+      .force("collision", d3.forceCollide<SimNode>().radius((d) => size(d.citationCount ?? 0) + 6));
 
     // Edges (arrows)
     const link = g
@@ -204,7 +204,7 @@ export function NetworkView() {
 
     node
       .append("circle")
-      .attr("r", (d) => size(d.citationCount))
+      .attr("r", (d) => size(d.citationCount ?? 0))
       .attr("fill", (d) => {
         const score = d.relevanceScore;
         if (score === undefined) return "#64748b"; // slate for non-seed nodes
@@ -220,7 +220,7 @@ export function NetworkView() {
         const words = d.title.split(/\s+/).slice(0, 6).join(" ");
         return words + (d.title.split(/\s+/).length > 6 ? "…" : "");
       })
-      .attr("x", (d) => size(d.citationCount) + 4)
+      .attr("x", (d) => size(d.citationCount ?? 0) + 4)
       .attr("y", 4)
       .attr("font-size", "10px")
       .attr("fill", "currentColor")
@@ -230,7 +230,7 @@ export function NetworkView() {
     node
       .append("circle")
       .attr("class", "selection-ring")
-      .attr("r", (d) => size(d.citationCount) + 6)
+      .attr("r", (d) => size(d.citationCount ?? 0) + 6)
       .attr("fill", "none")
       .attr("stroke", "#fbbf24")
       .attr("stroke-width", 2)
@@ -371,7 +371,7 @@ export function NetworkView() {
                 {selectedNode.year && (
                   <Badge variant="outline">{selectedNode.year}</Badge>
                 )}
-                <Badge variant="outline">{selectedNode.citationCount.toLocaleString()} citations</Badge>
+                <Badge variant="outline">{(selectedNode.citationCount?.toLocaleString() ?? "Unknown")} citations</Badge>
                 {selectedNode.relevanceScore !== undefined && (
                   <Badge variant="outline" className="bg-emerald-500/10 border-emerald-500/30 text-emerald-700 dark:text-emerald-300">
                     Score: {selectedNode.relevanceScore}

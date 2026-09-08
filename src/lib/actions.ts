@@ -8,12 +8,20 @@ import type { AcademicPaper, SearchFilters, SearchResult } from "@/lib/academic/
 // can apply. The "use server" directive is omitted intentionally — these are
 // client-side async helpers that we colocate here for organization.
 
+let searchSequence = 0;
+let activeSearch: AbortController | null = null;
 export async function runSearch(query: string, filters?: SearchFilters): Promise<void> {
   const store = useAppStore.getState();
+  const sequence = ++searchSequence;
+  activeSearch?.abort();
+  const controller = new AbortController(); activeSearch = controller;
+  store.setRawQuery(query);
+  store.setNetworkGraph(null); store.setSynthesis(null); store.setSelectedPaper(null);
   store.setIsSearching(true);
   store.setView("results");
   try {
     const res = await fetch("/api/search", {
+      signal: controller.signal,
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -26,6 +34,7 @@ export async function runSearch(query: string, filters?: SearchFilters): Promise
       throw new Error(err.error || `HTTP ${res.status}`);
     }
     const data = (await res.json()) as SearchResult;
+    if (sequence !== searchSequence) return;
     store.setPapers(data.papers);
     store.setUnderstoodQuery(data.understoodQuery);
     store.setSourceResults(data.sources);
@@ -34,13 +43,14 @@ export async function runSearch(query: string, filters?: SearchFilters): Promise
     // Refresh recent searches in the background
     void refreshRecentSearches();
   } catch (err) {
+    if (sequence !== searchSequence || controller.signal.aborted) return;
     console.error("[runSearch] error:", err);
     store.setPapers([]);
     store.setSourceResults([]);
-    store.setUnderstoodQuery(null);
+    store.setUnderstoodQuery({topic:query,intent:"Search failed; retry the original query",keywords:[],excludeKeywords:[],searchTerms:[query],filters:filters||store.filters,reasoning:"Search unavailable"});
     throw err;
   } finally {
-    store.setIsSearching(false);
+    if (sequence === searchSequence) store.setIsSearching(false);
   }
 }
 
@@ -57,17 +67,19 @@ export async function toggleSavePaper(paper: AcademicPaper): Promise<boolean> {
   const store = useAppStore.getState();
   const isSaved = store.savedIds.has(paper.id);
   if (isSaved) {
-    await fetch(`/api/library?paperId=${encodeURIComponent(paper.id)}`, {
+    const response = await fetch(`/api/library?paperId=${encodeURIComponent(paper.id)}`, {
       method: "DELETE",
     });
+    if (!response.ok) throw new Error("Could not remove saved paper");
     store.removeSaved(paper.id);
     return false;
   } else {
-    await fetch("/api/library", {
+    const response = await fetch("/api/library", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ paper }),
     });
+    if (!response.ok) throw new Error("Could not save paper");
     store.addSaved(paper.id);
     return true;
   }

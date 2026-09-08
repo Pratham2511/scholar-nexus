@@ -8,19 +8,7 @@ const LOCAL_USER_EMAIL = "demo@research-assistant.local";
  * Used as the implicit "current user" for this single-user sandbox.
  */
 export async function ensureLocalUser() {
-  let user = await db.userProfile.findUnique({ where: { id: LOCAL_USER_ID } });
-  if (!user) {
-    user = await db.userProfile.create({
-      data: {
-        id: LOCAL_USER_ID,
-        email: LOCAL_USER_EMAIL,
-        name: "Researcher",
-        affiliation: "—",
-        researchInterests: "",
-      },
-    });
-  }
-  return user;
+  return db.userProfile.upsert({where:{id:LOCAL_USER_ID},create:{id:LOCAL_USER_ID,email:LOCAL_USER_EMAIL,name:'Researcher',researchInterests:''},update:{}});
 }
 
 export function getLocalUserId(): string {

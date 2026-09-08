@@ -1,0 +1,283 @@
+{
+  "checkedAt": "2026-09-08T00:13:06.628Z",
+  "records": [
+    {
+      "query": "graph neural networks",
+      "filters": {},
+      "count": 5,
+      "durationMs": 10021,
+      "sources": [
+        {
+          "name": "Crossref",
+          "status": "timeout",
+          "error": "Source exceeded the search deadline. Retry or choose fewer sources."
+        },
+        {
+          "name": "arXiv",
+          "status": "success"
+        },
+        {
+          "name": "Europe PMC",
+          "status": "timeout",
+          "error": "Source exceeded the search deadline. Retry or choose fewer sources."
+        }
+      ],
+      "titles": [
+        {
+          "title": "Capsule Neural Networks for Graph Classification using Explicit Tensorial Graph Representations",
+          "doi": null,
+          "urls": [
+            {
+              "source": "arXiv",
+              "url": "https://arxiv.org/abs/1902.08399"
+            }
+          ]
+        },
+        {
+          "title": "Efficient data augmentation using graph imputation neural networks",
+          "doi": null,
+          "urls": [
+            {
+              "source": "arXiv",
+              "url": "https://arxiv.org/abs/1906.08502"
+            }
+          ]
+        },
+        {
+          "title": "k-hop Graph Neural Networks",
+          "doi": null,
+          "urls": [
+            {
+              "source": "arXiv",
+              "url": "https://arxiv.org/abs/1907.06051"
+            }
+          ]
+        },
+        {
+          "title": "Fast and Deep Graph Neural Networks",
+          "doi": null,
+          "urls": [
+            {
+              "source": "arXiv",
+              "url": "https://arxiv.org/abs/1911.08941"
+            }
+          ]
+        },
+        {
+          "title": "Correlation-aware Unsupervised Change-point Detection via Graph Neural Networks",
+          "doi": null,
+          "urls": [
+            {
+              "source": "arXiv",
+              "url": "https://arxiv.org/abs/2004.11934"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "query": "\"Attention Is All You Need\"",
+      "filters": {},
+      "count": 5,
+      "durationMs": 10005,
+      "sources": [
+        {
+          "name": "Crossref",
+          "status": "timeout",
+          "error": "Source exceeded the search deadline. Retry or choose fewer sources."
+        },
+        {
+          "name": "arXiv",
+          "status": "success"
+        },
+        {
+          "name": "Europe PMC",
+          "status": "timeout",
+          "error": "Source exceeded the search deadline. Retry or choose fewer sources."
+        }
+      ],
+      "titles": [
+        {
+          "title": "Attention Is All You Need",
+          "doi": null,
+          "urls": [
+            {
+              "source": "arXiv",
+              "url": "https://arxiv.org/abs/1706.03762"
+            }
+          ]
+        },
+        {
+          "title": "Attention is all you need for Videos: Self-attention based Video Summarization using Universal Transformers",
+          "doi": null,
+          "urls": [
+            {
+              "source": "arXiv",
+              "url": "https://arxiv.org/abs/1906.02792"
+            }
+          ]
+        },
+        {
+          "title": "Attention Is All You Need for Chinese Word Segmentation",
+          "doi": null,
+          "urls": [
+            {
+              "source": "arXiv",
+              "url": "https://arxiv.org/abs/1910.14537"
+            }
+          ]
+        },
+        {
+          "title": "Attention is All You Need in Speech Separation",
+          "doi": null,
+          "urls": [
+            {
+              "source": "arXiv",
+              "url": "https://arxiv.org/abs/2010.13154"
+            }
+          ]
+        },
+        {
+          "title": "Not All Attention Is All You Need",
+          "doi": null,
+          "urls": [
+            {
+              "source": "arXiv",
+              "url": "https://arxiv.org/abs/2104.04692"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "query": "10.1038/s41586-021-03819-2",
+      "filters": {},
+      "count": 1,
+      "durationMs": 10001,
+      "sources": [
+        {
+          "name": "Crossref",
+          "status": "timeout",
+          "error": "Source exceeded the search deadline. Retry or choose fewer sources."
+        },
+        {
+          "name": "arXiv",
+          "status": "unconfigured",
+          "error": "This source does not support this exact identifier lookup. Choose Crossref/Europe PMC for DOI or arXiv for an arXiv ID."
+        },
+        {
+          "name": "Europe PMC",
+          "status": "success"
+        }
+      ],
+      "titles": [
+        {
+          "title": "Highly accurate protein structure prediction with AlphaFold.",
+          "doi": "10.1038/s41586-021-03819-2",
+          "urls": [
+            {
+              "source": "Europe PMC",
+              "url": "https://europepmc.org/article/PMC/PMC8371605"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "query": "graph neural networks",
+      "filters": {
+        "yearFrom": 2025
+      },
+      "count": 5,
+      "durationMs": 9966,
+      "sources": [
+        {
+          "name": "Crossref",
+          "status": "success"
+        },
+        {
+          "name": "arXiv",
+          "status": "success"
+        },
+        {
+          "name": "Europe PMC",
+          "status": "success"
+        }
+      ],
+      "titles": [
+        {
+          "title": "Graph Neural Networks for Transmission Grid Topology Control: Busbar Information Asymmetry and Heterogeneous Representations",
+          "doi": null,
+          "urls": [
+            {
+              "source": "arXiv",
+              "url": "https://arxiv.org/abs/2501.07186"
+            }
+          ]
+        },
+        {
+          "title": "Spatio-Temporal Graph Neural Networks for Infant Language Acquisition Prediction",
+          "doi": null,
+          "urls": [
+            {
+              "source": "arXiv",
+              "url": "https://arxiv.org/abs/2503.14341"
+            }
+          ]
+        },
+        {
+          "title": "Geometry-Aware Edge Pooling for Graph Neural Networks",
+          "doi": null,
+          "urls": [
+            {
+              "source": "arXiv",
+              "url": "https://arxiv.org/abs/2506.11700"
+            }
+          ]
+        },
+        {
+          "title": "How do Probabilistic Graphical Models and Graph Neural Networks Look at Network Data?",
+          "doi": null,
+          "urls": [
+            {
+              "source": "arXiv",
+              "url": "https://arxiv.org/abs/2506.11869"
+            }
+          ]
+        },
+        {
+          "title": "Transformers are Graph Neural Networks",
+          "doi": null,
+          "urls": [
+            {
+              "source": "arXiv",
+              "url": "https://arxiv.org/abs/2506.22084"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "query": "scholarnexuszzzznonexistentphrase09389109",
+      "filters": {},
+      "count": 0,
+      "durationMs": 10001,
+      "sources": [
+        {
+          "name": "Crossref",
+          "status": "timeout",
+          "error": "Source exceeded the search deadline. Retry or choose fewer sources."
+        },
+        {
+          "name": "arXiv",
+          "status": "empty"
+        },
+        {
+          "name": "Europe PMC",
+          "status": "empty"
+        }
+      ],
+      "titles": []
+    }
+  ]
+}
