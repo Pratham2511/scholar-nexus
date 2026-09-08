@@ -8,7 +8,7 @@ import type { NextConfig } from "next";
  * - Security headers are applied via the `headers()` function below
  */
 const nextConfig: NextConfig = {
-  output: "standalone",
+
   reactStrictMode: true,
   poweredByHeader: false, // Don't leak "Next.js" in X-Powered-By header
   async headers() {

@@ -9,7 +9,7 @@ export function applyFilters(papers: AcademicPaper[], filters: SearchFilters): A
   return papers.filter((p) => {
     if (filters.yearFrom && (p.year === null || p.year < filters.yearFrom)) return false;
     if (filters.yearTo && (p.year === null || p.year > filters.yearTo)) return false;
-    if (filters.minCitations && p.citationCount < filters.minCitations) return false;
+    if (filters.minCitations && (p.citationCount == null || p.citationCount < filters.minCitations)) return false;
     if (filters.openAccessOnly && !p.openAccess) return false;
     if (filters.author) {
       const want = filters.author.toLowerCase();
@@ -50,92 +50,13 @@ export function applyFilters(papers: AcademicPaper[], filters: SearchFilters): A
   });
 }
 
-/**
- * Score each paper 0-100 based on relevance, citations, recency, source quality,
- * and open-access availability.
- */
-export function rankPapers(
-  papers: AcademicPaper[],
-  understood: AIUnderstoodQuery,
-): AcademicPaper[] {
-  const queryKeywords = understood.keywords.map((k) => k.toLowerCase());
-  const excludeKeywords = understood.excludeKeywords.map((k) => k.toLowerCase());
-  const topicKey = titleKey(understood.topic);
-
-  const currentYear = new Date().getFullYear();
-
-  const scored = papers.map((p) => {
-    const score = scorePaper(p, queryKeywords, excludeKeywords, topicKey, currentYear);
-    return { paper: p, score };
-  });
-
-  scored.sort((a, b) => b.score - a.score);
-  return scored.map((s) => ({ ...s.paper, relevanceScore: Math.round(s.score) }));
-}
-
-function scorePaper(
-  p: AcademicPaper,
-  queryKeywords: string[],
-  excludeKeywords: string[],
-  topicKey: string,
-  currentYear: number,
-): number {
-  let score = 0;
-
-  // Semantic relevance (40 points max)
-  const titleL = p.title.toLowerCase();
-  const abstractL = p.abstract.toLowerCase();
-  const keywordsL = p.keywords.map((k) => k.toLowerCase());
-
-  // Title match with topic words
-  const topicWords = topicKey.split(" ").filter((w) => w.length > 3);
-  const titleTopicHits = topicWords.filter((w) => titleL.includes(w)).length;
-  score += Math.min(15, titleTopicHits * 5);
-
-  // Keyword coverage
-  const kwHits = queryKeywords.filter((k) => {
-    return titleL.includes(k) || keywordsL.includes(k) || abstractL.includes(k);
-  }).length;
-  score += Math.min(15, kwHits * 3);
-
-  // Title keyword density (more keywords from query in title = more relevant)
-  if (queryKeywords.length > 0) {
-    const titleKwHits = queryKeywords.filter((k) => titleL.includes(k)).length;
-    score += Math.min(10, titleKwHits * 4);
-  }
-
-  // Exclude keywords penalty (heavy)
-  const exclHits = excludeKeywords.filter((k) => titleL.includes(k) || abstractL.includes(k)).length;
-  score -= exclHits * 10;
-
-  // Citation impact (25 points max, log scale)
-  if (p.citationCount > 0) {
-    const citationScore = Math.min(25, Math.log10(p.citationCount + 1) * 10);
-    score += citationScore;
-  }
-
-  // Recency (15 points max) — newer = better, but don't over-penalize classics
-  if (p.year) {
-    const age = currentYear - p.year;
-    if (age <= 1) score += 15;
-    else if (age <= 3) score += 12;
-    else if (age <= 5) score += 8;
-    else if (age <= 10) score += 4;
-    else score += 1;
-  }
-
-  // Source quality / publisher reputation (10 points max)
-  const venueL = (p.publisher || p.venue || "").toLowerCase();
-  const reputable = ["nature", "science", "ieee", "acm", "springer", "elsevier", "wiley", "cell", "lancet", "nejm", "pnas"];
-  if (reputable.some((r) => venueL.includes(r))) score += 10;
-  else if (venueL) score += 3;
-
-  // Open access bonus (5 points)
-  if (p.openAccess) score += 5;
-
-  // Multi-source discovery bonus (5 points) — paper exists on multiple sources = high quality
-  if (p.sources.length >= 3) score += 5;
-  else if (p.sources.length === 2) score += 2;
-
-  return Math.max(0, Math.min(100, score));
+/** Relevance only: title and available text. This is not a quality measure. */
+export function rankPapers(papers: AcademicPaper[], query: AIUnderstoodQuery): AcademicPaper[] {
+  const terms = [...new Set(query.keywords)];
+  return papers.map(p => {
+    const title = titleKey(p.title), abstract = p.abstract.toLowerCase();
+    const exact = title === titleKey(query.topic.replaceAll('"', ''));
+    const score = exact ? 100 : terms.reduce((n,t) => n + (title.includes(t) ? 3 : abstract.includes(t) ? 1 : 0), 0) / Math.max(1, terms.length * 3) * 95;
+    return { ...p, relevanceScore: Math.round(score) };
+  }).sort((a,b) => b.relevanceScore-a.relevanceScore || a.id.localeCompare(b.id));
 }

@@ -1,3 +1,4 @@
+import { providerFetch } from "../http";
 import type { AcademicPaper } from "../types";
 import { normalizeText, safeNumber, truncate, buildId, extractKeywords } from "../utils";
 
@@ -45,11 +46,12 @@ export async function searchCore(
     limit: Math.min(limit, 30),
   };
 
-  const res = await fetch(url, {
+  const res = await providerFetch(url, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
       Accept: "application/json",
+      Authorization: `Bearer ${process.env.CORE_API_KEY || ""}`,
     },
     body: JSON.stringify(body),
     signal,
@@ -67,7 +69,8 @@ export async function searchCore(
   const json = (await res.json()) as CoreResponse;
   if (json.error) throw new Error(`CORE error: ${json.error}`);
 
-  const results = json.results || [];
+  if (!Array.isArray(json.results)) throw new Error("Malformed CORE response");
+  const results = json.results;
   return results.map((r) => mapCoreResult(r));
 }
 
@@ -89,12 +92,12 @@ function mapCoreResult(r: CoreResult): AcademicPaper {
     year,
     doi,
     pdfLink,
-    citationCount: safeNumber(r.citationCount, 0),
+    citationCount: r.citationCount == null ? null : safeNumber(r.citationCount),
     publisher: r.publisher || r.repository?.name || null,
     sources: ["CORE"],
     sourceUrls: sourceUrl ? [{ source: "CORE", url: sourceUrl }] : [],
     keywords: (r.topics || []).slice(0, 8).map((s) => s.toLowerCase()),
-    openAccess: r.isOpenAccess ?? !!pdfLink,
+    openAccess: r.isOpenAccess ?? null,
     paperType: r.types?.[0] ?? null,
     venue: r.repository?.name || null,
   };

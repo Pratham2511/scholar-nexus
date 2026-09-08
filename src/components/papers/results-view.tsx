@@ -44,7 +44,7 @@ export function ResultsView() {
     const copy = [...papers];
     switch (sortBy) {
       case "citations":
-        copy.sort((a, b) => b.citationCount - a.citationCount);
+        copy.sort((a, b) => (b.citationCount ?? -1) - (a.citationCount ?? -1));
         break;
       case "year":
       case "newest":
@@ -58,9 +58,9 @@ export function ResultsView() {
     return copy;
   }, [papers, sortBy]);
 
-  // V2: Compute max citations in results for percentile badges
+  // V2: Compute max citations in results for citation metadata
   const maxCitationsInResults = useMemo(
-    () => papers.reduce((max, p) => Math.max(max, p.citationCount), 0),
+    () => papers.reduce((max, p) => Math.max(max, p.citationCount ?? 0), 0),
     [papers],
   );
 

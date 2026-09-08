@@ -3,20 +3,24 @@
 export interface AcademicPaper {
   /** Stable identifier we generate to dedupe across sources. */
   id: string;
+  identifiers?: { doi?: string; arxiv?: string; pmid?: string; pmcid?: string; openalex?: string; semanticScholar?: string };
+  retrievedAt?: string;
+  integrityNotices?: { kind: "retraction" | "correction"; source: string; url: string; retrievedAt: string }[];
+  provenance?: { source: string; citationCount: number | null; retrievedAt: string }[];
   title: string;
   authors: string[];
   abstract: string;
   year: number | null;
   doi: string | null;
   pdfLink: string | null;
-  citationCount: number;
+  citationCount: number | null;
   publisher: string | null;
   /** Original source name, e.g. "Semantic Scholar" */
   sources: string[];
   /** All known URLs for this paper across sources */
   sourceUrls: SourceUrl[];
   keywords: string[];
-  openAccess: boolean;
+  openAccess: boolean | null;
   paperType: string | null;
   venue: string | null;
   /** Relevance score (0-100) assigned by the ranking engine */
@@ -78,6 +82,7 @@ export interface SourceResult {
   source: string;
   papers: AcademicPaper[];
   success: boolean;
+  status?: "success" | "empty" | "partial" | "timeout" | "rate-limited" | "unconfigured" | "failed";
   error?: string;
   durationMs: number;
 }
@@ -88,6 +93,11 @@ export interface SearchResult {
   understoodQuery: AIUnderstoodQuery;
   totalFound: number;
   duplicatesRemoved: number;
+  retrievedCount?: number;
+  filteredCount?: number;
+  error?: string;
+  cursor?: string | null;
+  coverage?: string;
   durationMs: number;
 }
 
@@ -127,7 +137,7 @@ export interface NetworkNode {
   title: string;
   authors: string[];
   year: number | null;
-  citationCount: number;
+  citationCount: number | null;
   relevanceScore?: number;
   doi: string | null;
   source: string;
@@ -155,7 +165,7 @@ export interface AuthorProfile {
   authorId?: string;
   affiliations: string[];
   paperCount: number;
-  citationCount: number;
+  citationCount: number | null;
   hIndex: number | null;
   papers: AcademicPaper[];
 }
@@ -168,7 +178,7 @@ export interface CitationNeighbor {
   title: string;
   authors: string[];
   year: number | null;
-  citationCount: number;
+  citationCount: number | null;
   abstract: string;
   doi: string | null;
   openAccessPdf: string | null;

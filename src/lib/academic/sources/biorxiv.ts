@@ -1,3 +1,4 @@
+import { providerFetch } from "../http";
 import type { AcademicPaper } from "../types";
 import { normalizeText, truncate, buildId, extractKeywords } from "../utils";
 
@@ -87,7 +88,7 @@ async function fetchServer(
   // The API caps cursor pagination; we fetch the first 100 most-recent entries.
   // Endpoint: https://api.biorxiv.org/details/{server}/{from}/{to}/{cursor}
   const url = `https://api.biorxiv.org/details/${server}/${from}/${to}/0/json`;
-  const res = await fetch(url, { signal });
+  const res = await providerFetch(url, { signal });
   if (!res.ok) {
     const text = await res.text().catch(() => "");
     throw new Error(`${server} HTTP ${res.status}: ${truncate(text, 200)}`);

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { fetchAuthorProfile } from "@/lib/ai/assistant";
+import { fetchAuthorProfile } from "@/lib/academic/citations";
 import { db } from "@/lib/db";
 import { ensureLocalUser, getLocalUserId } from "@/lib/user";
 import {

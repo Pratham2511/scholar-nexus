@@ -3,6 +3,12 @@
 export function normalizeText(s: string | null | undefined): string {
   if (!s) return "";
   return s
+    .replace(/&(?:amp|lt|gt|quot|apos);|&#(?:x[0-9a-f]+|[0-9]+);/gi, entity => {
+      const named: Record<string,string> = { '&amp;': '&', '&lt;': '<', '&gt;': '>', '&quot;': '"', '&apos;': "'" };
+      if (named[entity]) return named[entity];
+      const n = entity.startsWith('&#x') ? parseInt(entity.slice(3,-1),16) : parseInt(entity.slice(2,-1),10);
+      return Number.isFinite(n) && n > 0 && n <= 0x10ffff ? String.fromCodePoint(n) : entity;
+    })
     .replace(/\s+/g, " ")
     .replace(/[^\S\r\n]+/g, " ")
     .trim();

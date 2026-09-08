@@ -191,10 +191,10 @@ export function DetailsView() {
               {p.year}
             </span>
           )}
-          {p.citationCount > 0 && (
+          {(p.citationCount ?? 0) > 0 && (
             <span className="flex items-center gap-1.5">
               <Quote className="h-4 w-4" />
-              {p.citationCount.toLocaleString()} citations
+              {(p.citationCount?.toLocaleString() ?? "Unknown")} citations
             </span>
           )}
           {p.publisher && (

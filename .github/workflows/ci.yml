@@ -1,41 +1,35 @@
-name: CI
-
+name: Verify local research workspace
 on:
   push:
-    branches: [main, master]
   pull_request:
-    branches: [main, master]
-
 jobs:
   quality:
-    name: Lint + Typecheck + Build
     runs-on: ubuntu-latest
     timeout-minutes: 20
-
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup Bun
-        uses: oven-sh/setup-bun@v2
-        with:
-          bun-version: latest
-
-      - name: Install dependencies
-        run: bun install --frozen-lockfile
-
-      - name: Generate Prisma client
-        run: bun run db:generate
-
-      - name: Lint
-        run: bun run lint
-        continue-on-error: true  # Don't block on lint warnings yet
-
-      - name: Type-check
-        run: bunx tsc --noEmit
-
-      - name: Build
-        run: bun run build
+    services:
+      postgres:
+        image: postgres:16.10
         env:
-          DATABASE_URL: "file::memory:?cache=shared"
-          NODE_ENV: production
+          POSTGRES_USER: scholar
+          POSTGRES_PASSWORD: scholar_local
+          POSTGRES_DB: scholar_nexus
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U scholar -d scholar_nexus"
+          --health-interval 5s --health-timeout 3s --health-retries 12
+    env:
+      DATABASE_URL: postgresql://scholar:scholar_local@127.0.0.1:5432/scholar_nexus?schema=public
+      TEST_DATABASE_URL: postgresql://scholar:scholar_local@127.0.0.1:5432/scholar_nexus?schema=public
+      AI_ENABLED: 'false'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+      - run: npm run db:deploy
+      - run: npm run lint
+      - run: npm run typecheck
+      - run: npm test
+      - run: npm run build

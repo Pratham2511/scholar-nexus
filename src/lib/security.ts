@@ -60,7 +60,7 @@ export function checkRateLimit(
   opts: RateLimitOptions,
 ): RateLimitResult {
   const ip = getClientIP(req);
-  const key = `${ip}`;
+  const key = `${ip}:${req.nextUrl.pathname}:${req.method}`;
   const now = Date.now();
   const windowStart = now - opts.windowMs;
 
