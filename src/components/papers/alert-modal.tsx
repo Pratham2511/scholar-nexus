@@ -69,7 +69,7 @@ export function AlertModal() {
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <div className="flex h-10 w-10 items-center justify-center rounded-[2px] border border-border-2 bg-surface text-gold">
+          <div className="flex h-10 w-10 items-center justify-center rounded-[2px] border border-border-2 bg-surface text-accent">
             <Bell className="h-5 w-5" />
           </div>
           <DialogTitle className="flex items-center gap-2">

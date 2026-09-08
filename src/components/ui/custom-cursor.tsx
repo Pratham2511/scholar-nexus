@@ -1,199 +1,157 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef } from "react";
 
-type HoverState = "default" | "button" | "card" | "input";
-
+/**
+ * Optical Reticle Custom Cursor
+ *
+ * Designed for precision research instruments:
+ * - 0 React state updates on mousemove (pure direct DOM mutation via RAF)
+ * - Automatic graceful fallback on touch devices (maxTouchPoints > 0)
+ * - Full respect for prefers-reduced-motion
+ * - Non-destructive text selection (yields to native caret on inputs)
+ * - Semantic states: default crosshair, action lock, evidence bracket, text yield
+ */
 export function CustomCursor() {
-  const [mounted, setMounted] = useState(false);
-  const [visible, setVisible] = useState(false);
-  const [hoverState, setHoverState] = useState<HoverState>("default");
-
-  const dotRef = useRef<HTMLDivElement>(null);
-  const ringRef = useRef<HTMLDivElement>(null);
-
-  const mouseX = useRef(-100);
-  const mouseY = useRef(-100);
-  const ringX = useRef(-100);
-  const ringY = useRef(-100);
-  const rafId = useRef<number | null>(null);
+  const cursorRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    // Only render on non-touch devices
-    if (typeof window === "undefined" || navigator.maxTouchPoints > 0) {
+    // Disable on touch devices, SSR, or if user prefers reduced motion
+    if (
+      typeof window === "undefined" ||
+      navigator.maxTouchPoints > 0 ||
+      window.matchMedia("(prefers-reduced-motion: reduce)").matches
+    ) {
       return;
     }
-    setMounted(true);
+
+    const cursorEl = cursorRef.current;
+    if (!cursorEl) return;
+
+    let mouseX = -100;
+    let mouseY = -100;
+    let currentX = -100;
+    let currentY = -100;
+    let isVisible = false;
+    let isMouseDown = false;
+    let currentState: "default" | "action" | "paper" | "text" = "default";
+    let rafId: number | null = null;
+
+    document.documentElement.classList.add("has-custom-cursor");
+
+    const updatePosition = () => {
+      // Smooth 0.15 lerp for the outer reticle assembly
+      currentX += (mouseX - currentX) * 0.35;
+      currentY += (mouseY - currentY) * 0.35;
+
+      cursorEl.style.transform = `translate3d(${currentX}px, ${currentY}px, 0)`;
+
+      rafId = requestAnimationFrame(updatePosition);
+    };
+
+    rafId = requestAnimationFrame(updatePosition);
 
     const onMouseMove = (e: MouseEvent) => {
-      mouseX.current = e.clientX;
-      mouseY.current = e.clientY;
-      if (!visible) setVisible(true);
+      mouseX = e.clientX;
+      mouseY = e.clientY;
 
-      if (dotRef.current) {
-        dotRef.current.style.transform = `translate3d(${e.clientX - 3}px, ${e.clientY - 3}px, 0)`;
+      if (!isVisible) {
+        isVisible = true;
+        cursorEl.style.opacity = "1";
       }
+    };
 
-      // Quick fallback delegation check
-      const target = e.target as HTMLElement | null;
+    const updateSemanticState = (target: HTMLElement | null) => {
       if (!target) return;
 
+      let nextState: "default" | "action" | "paper" | "text" = "default";
+
       if (target.closest("input, textarea, [contenteditable='true']")) {
-        setHoverState("input");
-      } else if (target.closest(".paper-row, [data-slot='card'], article.paper-card, .project-paper-card")) {
-        setHoverState("card");
-      } else if (target.closest("a, button, [role='button'], [data-slot='button'], summary")) {
-        setHoverState("button");
-      } else {
-        setHoverState("default");
+        nextState = "text";
+      } else if (
+        target.closest(
+          ".paper-row, article.paper-card, [data-evidence-card], .reading-passage"
+        )
+      ) {
+        nextState = "paper";
+      } else if (
+        target.closest(
+          "a, button, [role='button'], [data-slot='button'], summary, select, [tabindex='0']"
+        )
+      ) {
+        nextState = "action";
       }
+
+      if (nextState !== currentState) {
+        currentState = nextState;
+        cursorEl.dataset.state = nextState;
+      }
+    };
+
+    const onMouseOver = (e: MouseEvent) => {
+      updateSemanticState(e.target as HTMLElement | null);
     };
 
     const onMouseDown = () => {
-      if (dotRef.current) {
-        dotRef.current.style.transform = `translate3d(${mouseX.current - 3}px, ${mouseY.current - 3}px, 0) scale(2)`;
-      }
-      setTimeout(() => {
-        if (dotRef.current) {
-          dotRef.current.style.transform = `translate3d(${mouseX.current - 3}px, ${mouseY.current - 3}px, 0) scale(1)`;
-        }
-      }, 80);
+      isMouseDown = true;
+      cursorEl.dataset.active = "true";
+    };
+
+    const onMouseUp = () => {
+      isMouseDown = false;
+      cursorEl.dataset.active = "false";
     };
 
     const onMouseLeave = () => {
-      setVisible(false);
+      isVisible = false;
+      cursorEl.style.opacity = "0";
     };
 
     const onMouseEnter = () => {
-      setVisible(true);
+      isVisible = true;
+      cursorEl.style.opacity = "1";
     };
 
     window.addEventListener("mousemove", onMouseMove, { passive: true });
+    window.addEventListener("mouseover", onMouseOver, { passive: true });
     window.addEventListener("mousedown", onMouseDown, { passive: true });
+    window.addEventListener("mouseup", onMouseUp, { passive: true });
     document.documentElement.addEventListener("mouseleave", onMouseLeave);
     document.documentElement.addEventListener("mouseenter", onMouseEnter);
 
-    // MutationObserver to attach listeners to hoverables
-    const attachHoverListeners = () => {
-      const buttons = document.querySelectorAll<HTMLElement>("a, button, [role='button'], [data-slot='button'], summary");
-      const cards = document.querySelectorAll<HTMLElement>(".paper-row, [data-slot='card'], article.paper-card");
-      const inputs = document.querySelectorAll<HTMLElement>("input, textarea, [contenteditable='true']");
-
-      buttons.forEach((el) => {
-        el.onmouseenter = () => setHoverState("button");
-        el.onmouseleave = () => setHoverState("default");
-      });
-
-      cards.forEach((el) => {
-        el.onmouseenter = () => setHoverState("card");
-        el.onmouseleave = () => setHoverState("default");
-      });
-
-      inputs.forEach((el) => {
-        el.onmouseenter = () => setHoverState("input");
-        el.onmouseleave = () => setHoverState("default");
-      });
-    };
-
-    attachHoverListeners();
-
-    const observer = new MutationObserver(() => {
-      attachHoverListeners();
-    });
-
-    observer.observe(document.body, { childList: true, subtree: true });
-
-    // Smooth lerp loop (0.12s smoothing using requestAnimationFrame)
-    const lerpFactor = 0.16;
-    const animate = () => {
-      ringX.current += (mouseX.current - ringX.current) * lerpFactor;
-      ringY.current += (mouseY.current - ringY.current) * lerpFactor;
-
-      if (ringRef.current) {
-        ringRef.current.style.transform = `translate3d(${ringX.current}px, ${ringY.current}px, 0) translate(-50%, -50%)`;
-      }
-      rafId.current = requestAnimationFrame(animate);
-    };
-
-    rafId.current = requestAnimationFrame(animate);
-
     return () => {
+      if (rafId) cancelAnimationFrame(rafId);
+      document.documentElement.classList.remove("has-custom-cursor");
       window.removeEventListener("mousemove", onMouseMove);
+      window.removeEventListener("mouseover", onMouseOver);
       window.removeEventListener("mousedown", onMouseDown);
+      window.removeEventListener("mouseup", onMouseUp);
       document.documentElement.removeEventListener("mouseleave", onMouseLeave);
       document.documentElement.removeEventListener("mouseenter", onMouseEnter);
-      observer.disconnect();
-      if (rafId.current) cancelAnimationFrame(rafId.current);
     };
-  }, [visible]);
-
-  if (!mounted) return null;
-
-  // Ring styles based on hover state
-  let ringWidth = 28;
-  let ringHeight = 28;
-  let ringRadius = "50%";
-  let ringBorder = "1px solid var(--color-text-tertiary)";
-  let ringBg = "transparent";
-
-  if (hoverState === "button") {
-    ringWidth = 44;
-    ringHeight = 44;
-    ringRadius = "50%";
-    ringBorder = "1px solid var(--color-gold)";
-  } else if (hoverState === "card") {
-    ringWidth = 48;
-    ringHeight = 48;
-    ringRadius = "4px";
-    ringBorder = "1px solid var(--color-teal)";
-  } else if (hoverState === "input") {
-    ringWidth = 2;
-    ringHeight = 24;
-    ringRadius = "1px";
-    ringBorder = "none";
-    ringBg = "var(--color-text-secondary)";
-  }
-
-  const dotSize = hoverState === "button" ? 3 : 6;
+  }, []);
 
   return (
-    <>
-      {/* Layer 1 — The DOT */}
-      <div
-        ref={dotRef}
-        className="pointer-events-none fixed top-0 left-0"
-        style={{
-          width: `${dotSize}px`,
-          height: `${dotSize}px`,
-          backgroundColor: "var(--color-gold)",
-          borderRadius: "50%",
-          zIndex: 9999,
-          mixBlendMode: "difference",
-          opacity: visible ? 1 : 0,
-          transform: "translate3d(-100px, -100px, 0)",
-          transition: "width 0.15s ease, height 0.15s ease, opacity 0.15s ease",
-          willChange: "transform",
-        }}
-      />
+    <div
+      ref={cursorRef}
+      aria-hidden="true"
+      className="reticle-cursor fixed top-0 left-0 pointer-events-none z-[9999] opacity-0 will-change-transform"
+      data-state="default"
+      data-active="false"
+      style={{
+        transform: "translate3d(-100px, -100px, 0)",
+      }}
+    >
+      {/* Central Datum Core */}
+      <div className="reticle-dot" />
 
-      {/* Layer 2 — THE RING */}
-      <div
-        ref={ringRef}
-        className="pointer-events-none fixed top-0 left-0"
-        style={{
-          width: `${ringWidth}px`,
-          height: `${ringHeight}px`,
-          borderRadius: ringRadius,
-          border: ringBorder,
-          backgroundColor: ringBg,
-          zIndex: 9998,
-          opacity: visible ? 1 : 0,
-          transform: "translate3d(-100px, -100px, 0) translate(-50%, -50%)",
-          transition:
-            "width 0.2s cubic-bezier(0.16, 1, 0.3, 1), height 0.2s cubic-bezier(0.16, 1, 0.3, 1), border 0.2s ease, border-radius 0.2s ease, background-color 0.2s ease, opacity 0.15s ease",
-          willChange: "transform",
-        }}
-      />
-    </>
+      {/* Crosshair & Bracket Reticles */}
+      <div className="reticle-frame">
+        <span className="tick-north" />
+        <span className="tick-south" />
+        <span className="tick-east" />
+        <span className="tick-west" />
+      </div>
+    </div>
   );
 }

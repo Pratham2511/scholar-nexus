@@ -69,13 +69,13 @@ export function HomeView() {
       {/* Hero */}
       <div className="text-center mb-10">
         <div className="inline-flex items-center gap-2 rounded-[2px] border border-border-2 bg-surface px-3 py-1 font-mono text-xs uppercase tracking-wider text-text-tertiary mb-6">
-          <span className="text-gold">●</span>
-          The Scholar's Study · Academic Search & Synthesis
+          <span className="text-accent">§</span>
+          EVIDENCE DESK // ACADEMIC SEARCH & SYNTHESIS
         </div>
         <h1 className="font-display text-4xl sm:text-5xl lg:text-6xl font-light tracking-tight text-balance text-text-primary">
           Find the right papers,
           <br />
-          <em className="text-gold font-light not-italic">
+          <em className="text-text-primary opacity-90 font-light not-italic">
             across every academic source.
           </em>
         </h1>
@@ -88,21 +88,21 @@ export function HomeView() {
       {stats && (
         <div className="mb-8 flex flex-wrap items-center justify-center gap-x-6 gap-y-2 font-mono text-xs text-text-tertiary">
           <span className="flex items-center gap-1.5">
-            <Search className="h-3.5 w-3.5 text-gold" />
+            <Search className="h-3.5 w-3.5 text-accent" />
             <strong className="text-text-primary tabular-nums font-medium">
               <CountUp end={stats.totalSearches} />
             </strong>{" "}
             searches
           </span>
           <span className="flex items-center gap-1.5">
-            <BookMarked className="h-3.5 w-3.5 text-gold" />
+            <BookMarked className="h-3.5 w-3.5 text-provenance" />
             <strong className="text-text-primary tabular-nums font-medium">
               <CountUp end={stats.totalPapersSaved} />
             </strong>{" "}
             papers saved
           </span>
           <span className="flex items-center gap-1.5">
-            <Zap className="h-3.5 w-3.5 text-gold" />
+            <Zap className="h-3.5 w-3.5 text-datum" />
             <strong className="text-text-primary tabular-nums font-medium">
               <CountUp end={stats.totalSourcesActive} />
             </strong>{" "}
@@ -110,7 +110,7 @@ export function HomeView() {
           </span>
           {stats.totalCollections > 0 && (
             <span className="flex items-center gap-1.5">
-              <Layers className="h-3.5 w-3.5 text-teal" />
+              <Layers className="h-3.5 w-3.5 text-link" />
               <strong className="text-text-primary tabular-nums font-medium">
                 <CountUp end={stats.totalCollections} />
               </strong>{" "}
@@ -162,7 +162,7 @@ export function HomeView() {
         {/* Trending */}
         <Card className="p-5">
           <div className="flex items-center gap-2 mb-4">
-            <TrendingUp className="h-4 w-4 text-gold" />
+            <TrendingUp className="h-4 w-4 text-accent" />
             <h2 className="font-display text-xl font-normal text-text-primary">
               Trending Inquiries
             </h2>
@@ -175,10 +175,10 @@ export function HomeView() {
                 <button
                   key={t.topic}
                   onClick={() => handleTrendingClick(t.topic)}
-                  className="group rounded-[2px] border border-border-2 bg-surface px-2.5 py-1.5 text-left text-xs transition duration-150 hover:border-gold"
+                  className="group rounded-[2px] border border-border-2 bg-surface px-2.5 py-1.5 text-left text-xs transition duration-150 hover:border-accent"
                 >
                   <span className="font-ui text-text-primary">{t.topic}</span>
-                  <span className="ml-2 font-mono text-[0.65rem] text-text-tertiary group-hover:text-gold uppercase">
+                  <span className="ml-2 font-mono text-[0.65rem] text-text-tertiary group-hover:text-accent uppercase">
                     {t.domain}
                   </span>
                 </button>
@@ -190,7 +190,7 @@ export function HomeView() {
         {/* Recent searches */}
         <Card className="p-5">
           <div className="flex items-center gap-2 mb-4">
-            <Clock className="h-4 w-4 text-gold" />
+            <Clock className="h-4 w-4 text-datum" />
             <h2 className="font-display text-xl font-normal text-text-primary">
               Recent Searches
             </h2>
@@ -205,7 +205,7 @@ export function HomeView() {
                 <li key={s.id}>
                   <button
                     onClick={() => handleRecentClick(s.query)}
-                    className="w-full flex items-center justify-between gap-3 rounded-[2px] border border-border bg-surface px-3 py-2 text-left font-mono text-xs text-text-secondary hover:border-gold hover:text-gold transition duration-150"
+                    className="w-full flex items-center justify-between gap-3 rounded-[2px] border border-border bg-surface px-3 py-2 text-left font-mono text-xs text-text-secondary hover:border-accent hover:text-accent transition duration-150"
                   >
                     <span className="truncate flex-1">{s.query}</span>
                     {s.resultCount !== null && (
@@ -224,37 +224,37 @@ export function HomeView() {
       {/* Navigation cards */}
       <div className="mt-10 grid sm:grid-cols-3 gap-4">
         <Card className="p-5 flex items-start gap-3">
-          <BookMarked className="h-4 w-4 text-gold mt-1 shrink-0" />
+          <BookMarked className="h-4 w-4 text-provenance mt-1 shrink-0" />
           <div>
             <h3 className="font-display text-lg font-normal text-text-primary">Saved Library</h3>
             <p className="font-ui text-xs text-text-secondary font-light mt-1 leading-relaxed">
               Curate literature into projects with inclusion criteria and status screening.
             </p>
-            <Button variant="link" size="sm" className="px-0 mt-2 h-auto text-teal hover:text-gold" onClick={() => setView("library")}>
+            <Button variant="link" size="sm" className="px-0 mt-2 h-auto text-link hover:text-accent" onClick={() => setView("library")}>
               Open library →
             </Button>
           </div>
         </Card>
         <Card className="p-5 flex items-start gap-3">
-          <Sparkles className="h-4 w-4 text-gold mt-1 shrink-0" />
+          <Sparkles className="h-4 w-4 text-accent mt-1 shrink-0" />
           <div>
             <h3 className="font-display text-lg font-normal text-text-primary">Citation Network</h3>
             <p className="font-ui text-xs text-text-secondary font-light mt-1 leading-relaxed">
               Visualize scholarly connections and citation graphs across related studies.
             </p>
-            <Button variant="link" size="sm" className="px-0 mt-2 h-auto text-teal hover:text-gold" onClick={() => setView("network")}>
+            <Button variant="link" size="sm" className="px-0 mt-2 h-auto text-link hover:text-accent" onClick={() => setView("network")}>
               Open network →
             </Button>
           </div>
         </Card>
         <Card className="p-5 flex items-start gap-3">
-          <Layers className="h-4 w-4 text-gold mt-1 shrink-0" />
+          <Layers className="h-4 w-4 text-datum mt-1 shrink-0" />
           <div>
             <h3 className="font-display text-lg font-normal text-text-primary">Research Desk</h3>
             <p className="font-ui text-xs text-text-secondary font-light mt-1 leading-relaxed">
               Synthesize findings, trace source passages, and export bibliography matrices.
             </p>
-            <Button variant="link" size="sm" className="px-0 mt-2 h-auto text-teal hover:text-gold" onClick={() => setView("profile")}>
+            <Button variant="link" size="sm" className="px-0 mt-2 h-auto text-link hover:text-accent" onClick={() => setView("profile")}>
               View profile →
             </Button>
           </div>
@@ -267,7 +267,7 @@ export function HomeView() {
 function FeatureCard({ icon: Icon, title, desc }: { icon: React.ElementType; title: string; desc: string }) {
   return (
     <Card className="p-4 flex flex-col items-center text-center gap-2">
-      <div className="flex h-9 w-9 items-center justify-center rounded-[2px] border border-border-2 bg-surface-2 text-gold">
+      <div className="flex h-9 w-9 items-center justify-center rounded-[2px] border border-border-2 bg-surface-2 text-accent">
         <Icon className="h-4 w-4" />
       </div>
       <div className="font-display text-base font-normal text-text-primary">{title}</div>

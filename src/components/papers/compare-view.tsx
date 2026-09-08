@@ -127,7 +127,7 @@ export function CompareView() {
                       href={su.url}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="inline-flex items-center gap-1 rounded-[2px] border border-border-2 px-2 py-0.5 font-mono text-[0.65rem] text-text-secondary hover:border-gold hover:text-gold uppercase transition duration-150"
+                      className="inline-flex items-center gap-1 rounded-[2px] border border-border-2 px-2 py-0.5 font-mono text-[0.65rem] text-text-secondary hover:border-accent hover:text-accent uppercase transition duration-150"
                     >
                       <ExternalLink className="h-3 w-3" />
                       {su.source}
@@ -271,7 +271,7 @@ function AbstractCell({ abstract, paperId }: { abstract: string; paperId: string
       {abstract.length > 200 && (
         <button
           onClick={() => setExpanded(!expanded)}
-          className="mt-1 inline-flex items-center gap-0.5 font-mono text-xs text-teal hover:text-gold hover:underline"
+          className="mt-1 inline-flex items-center gap-0.5 font-mono text-xs text-link hover:text-accent hover:underline"
         >
           {expanded ? (
             <>

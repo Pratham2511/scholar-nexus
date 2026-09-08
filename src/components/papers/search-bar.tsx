@@ -88,8 +88,8 @@ export function SearchBar({ hero = false, placeholder }: SearchBarProps) {
 
     return (
       <div className="w-full">
-        <div className="relative rounded-[3px] border border-border-2 bg-surface p-1 transition-[border-color,box-shadow] focus-within:border-gold focus-within:ring-1 focus-within:ring-gold">
-          <Search className="pointer-events-none absolute left-4 top-4 h-4 w-4 text-gold" />
+        <div className="relative rounded-[2px] border border-border-2 bg-surface-inset p-1 transition-[border-color,box-shadow] focus-within:border-border-2 focus-within:ring-1 focus-within:ring-border-2">
+          <Search className="pointer-events-none absolute left-4 top-4 h-4 w-4 text-accent" />
           <Textarea
             ref={textareaRef}
             value={local}
@@ -134,7 +134,7 @@ export function SearchBar({ hero = false, placeholder }: SearchBarProps) {
             if (e.key === "Enter") void handleSubmit();
           }}
           placeholder={placeholder || "Search papers…"}
-          className="h-9 w-full rounded-[2px] border border-border-2 bg-surface pl-9 pr-3 font-mono text-sm text-text-primary outline-none transition-colors focus:border-gold focus:ring-1 focus:ring-gold"
+          className="h-9 w-full rounded-[2px] border border-border-2 bg-surface-inset pl-9 pr-3 font-mono text-sm text-text-primary outline-none transition-colors focus:border-border-2 focus:ring-1 focus:ring-border-2"
           disabled={isSearching}
         />
       </div>

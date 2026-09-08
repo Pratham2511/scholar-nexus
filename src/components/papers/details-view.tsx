@@ -173,7 +173,7 @@ export function DetailsView() {
                       setSelectedAuthorName(name);
                       setView("author");
                     }}
-                    className="hover:text-gold hover:underline"
+                    className="hover:text-accent hover:underline"
                   >
                     {name}
                   </button>
@@ -210,7 +210,7 @@ export function DetailsView() {
                 href={`https://doi.org/${p.doi}`}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-teal hover:underline"
+                className="text-link hover:underline"
               >
                 {p.doi}
               </a>
@@ -328,15 +328,15 @@ export function DetailsView() {
       </Card>
 
       {/* AI Insights */}
-      <Card className="p-6 mb-4 bg-surface border border-border border-l-2 border-l-red rounded-[3px] shadow-none">
+      <Card className="p-6 mb-4 bg-surface border border-border border-l-2 border-l-accent rounded-[2px] shadow-none">
         <div className="flex items-center gap-2 mb-4">
-          <span className="font-mono text-xs uppercase tracking-wider text-red font-semibold">
+          <span className="font-mono text-xs uppercase tracking-wider text-accent font-semibold">
             AI ANALYSIS
           </span>
           <span className="font-ui text-xs text-text-tertiary">·</span>
           <h2 className="font-display text-xl font-normal text-text-primary">Paper Insights</h2>
           {loadingInsights && (
-            <Badge variant="outline" className="text-[0.65rem] border-gold text-gold">
+            <Badge variant="outline" className="text-[0.65rem] border-accent text-accent">
               Generating…
             </Badge>
           )}

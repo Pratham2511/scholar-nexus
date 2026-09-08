@@ -15,6 +15,7 @@ const config: Config = {
         ground: "var(--color-ground)",
         surface: "var(--color-surface)",
         "surface-2": "var(--color-surface-2)",
+        "surface-inset": "var(--color-surface-inset)",
         border: "var(--color-border)",
         "border-2": "var(--color-border-2)",
 
@@ -22,17 +23,14 @@ const config: Config = {
         "text-secondary": "var(--color-text-secondary)",
         "text-tertiary": "var(--color-text-tertiary)",
 
-        gold: "var(--color-gold)",
-        "gold-dim": "var(--color-gold-dim)",
-        green: "var(--color-green)",
-        "green-bright": "var(--color-green-bright)",
-        red: "var(--color-red)",
-        teal: "var(--color-teal)",
-
         accent: "var(--color-accent)",
+        "accent-dim": "var(--color-accent-dim)",
+        provenance: "var(--color-provenance)",
+        datum: "var(--color-datum)",
         link: "var(--color-link)",
         danger: "var(--color-danger)",
         success: "var(--color-success)",
+        warning: "var(--color-warning)",
 
         background: "var(--background)",
         foreground: "var(--foreground)",
@@ -64,9 +62,9 @@ const config: Config = {
         ring: "var(--ring)",
       },
       fontFamily: {
-        display: ["var(--font-display)", "Cormorant Garamond", "Georgia", "serif"],
-        ui: ["var(--font-ui)", "DM Sans", "system-ui", "sans-serif"],
-        mono: ["var(--font-mono)", "JetBrains Mono", "monospace"],
+        display: ["var(--font-display)", "Newsreader", "Georgia", "serif"],
+        ui: ["var(--font-ui)", "Geist", "system-ui", "sans-serif"],
+        mono: ["var(--font-mono)", "Geist Mono", "monospace"],
       },
       borderRadius: {
         sm: "2px",
@@ -79,3 +77,4 @@ const config: Config = {
 };
 
 export default config;
+

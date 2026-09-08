@@ -75,14 +75,14 @@ export function AISynthesisCard() {
   };
 
   return (
-    <Card className="mb-4 overflow-hidden rounded-[3px] border border-border border-l-2 border-l-red bg-surface p-0 shadow-none hover:border-l-red">
+    <Card className="mb-4 overflow-hidden rounded-[2px] border border-border border-l-2 border-l-accent bg-surface p-0 shadow-none hover:border-l-accent">
       <button
         onClick={() => setExpanded(!expanded)}
         className="w-full flex items-center gap-3 p-4 text-left hover:bg-surface-2 transition duration-150"
       >
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 mb-1">
-            <span className="font-mono text-xs uppercase tracking-wider text-red font-semibold">
+            <span className="font-mono text-xs uppercase tracking-wider text-accent font-semibold">
               AI ANALYSIS
             </span>
             <span className="font-ui text-xs text-text-tertiary">·</span>
@@ -90,7 +90,7 @@ export function AISynthesisCard() {
               Evidence Synthesis
             </span>
             {isSynthesizing && (
-              <Badge variant="outline" className="text-[0.65rem] border-gold text-gold">
+              <Badge variant="outline" className="text-[0.65rem] border-accent text-accent">
                 Synthesizing…
               </Badge>
             )}
@@ -162,7 +162,7 @@ export function AISynthesisCard() {
                     key={i}
                     className="font-ui text-sm text-text-secondary font-light flex items-start gap-2"
                   >
-                    <span className="text-gold mt-0.5">•</span>
+                    <span className="text-accent mt-0.5">•</span>
                     <span>{finding}</span>
                   </li>
                 ))}
@@ -174,7 +174,7 @@ export function AISynthesisCard() {
           {synthesis.methodologies.length > 0 && (
             <div>
               <h3 className="font-ui text-xs uppercase tracking-wider text-text-tertiary flex items-center gap-1.5 mb-2">
-                <GitBranch className="h-3.5 w-3.5 text-teal" />
+                <GitBranch className="h-3.5 w-3.5 text-provenance" />
                 Common Methodologies
               </h3>
               <div className="flex flex-wrap gap-1.5">
@@ -194,14 +194,14 @@ export function AISynthesisCard() {
           {synthesis.researchGaps.length > 0 && (
             <div>
               <h3 className="font-ui text-xs uppercase tracking-wider text-text-tertiary flex items-center gap-1.5 mb-2">
-                <AlertTriangle className="h-3.5 w-3.5 text-gold" />
+                <AlertTriangle className="h-3.5 w-3.5 text-datum" />
                 Open Questions / Gaps
               </h3>
               <div className="flex flex-wrap gap-1.5">
                 {synthesis.researchGaps.map((g, i) => (
                   <span
                     key={i}
-                    className="rounded-[2px] border border-gold/40 bg-surface-2 px-2 py-0.5 font-mono text-[0.65rem] text-gold"
+                    className="rounded-[2px] border border-datum/40 bg-surface-2 px-2 py-0.5 font-mono text-[0.65rem] text-datum"
                   >
                     {g}
                   </span>
@@ -214,7 +214,7 @@ export function AISynthesisCard() {
           {synthesis.suggestedQueries.length > 0 && (
             <div>
               <h3 className="font-ui text-xs uppercase tracking-wider text-text-tertiary flex items-center gap-1.5 mb-2">
-                <Search className="h-3.5 w-3.5 text-teal" />
+                <Search className="h-3.5 w-3.5 text-link" />
                 Suggested Inquiries
               </h3>
               <div className="flex flex-wrap gap-1.5">
@@ -222,7 +222,7 @@ export function AISynthesisCard() {
                   <button
                     key={i}
                     onClick={() => handleSuggestedQuery(q)}
-                    className="rounded-[2px] border border-border-2 bg-transparent px-2.5 py-1 font-mono text-xs text-text-secondary hover:border-gold hover:text-gold transition duration-150"
+                    className="rounded-[2px] border border-border-2 bg-transparent px-2.5 py-1 font-mono text-xs text-text-secondary hover:border-accent hover:text-accent transition duration-150"
                   >
                     {q}
                   </button>

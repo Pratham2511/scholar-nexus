@@ -1,28 +1,27 @@
 import type { Metadata } from 'next';
-import { Cormorant_Garamond, DM_Sans, JetBrains_Mono } from 'next/font/google';
+import { Newsreader, Geist, Geist_Mono } from 'next/font/google';
 import './globals.css';
 import { CustomCursor } from '@/components/ui/custom-cursor';
-import { AmbientBackground } from '@/components/ui/ambient-background';
 import { PageLoader } from '@/components/ui/page-loader';
 
-const cormorantGaramond = Cormorant_Garamond({
+const newsreader = Newsreader({
   subsets: ['latin'],
-  weight: ['300', '400', '500', '600', '700'],
+  weight: ['300', '400', '500', '600'],
   style: ['normal', 'italic'],
   variable: '--font-display',
   display: 'swap',
 });
 
-const dmSans = DM_Sans({
+const geist = Geist({
   subsets: ['latin'],
   weight: ['300', '400', '500', '600'],
   variable: '--font-ui',
   display: 'swap',
 });
 
-const jetbrainsMono = JetBrains_Mono({
+const geistMono = Geist_Mono({
   subsets: ['latin'],
-  weight: ['400', '500'],
+  weight: ['400', '500', '600'],
   variable: '--font-mono',
   display: 'swap',
 });
@@ -48,14 +47,14 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`${cormorantGaramond.variable} ${dmSans.variable} ${jetbrainsMono.variable}`}
+      className={`${newsreader.variable} ${geist.variable} ${geistMono.variable}`}
     >
       <body>
         <CustomCursor />
-        <AmbientBackground />
         <PageLoader />
         {children}
       </body>
     </html>
   );
 }
+
