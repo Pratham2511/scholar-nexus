@@ -384,11 +384,17 @@ test("canceling a queued request respects its deadline without opening another c
   try {
     const first = providerFetch("https://queue-test.invalid", {});
     await new Promise((resolve) => setTimeout(resolve, 10));
-    await assert.rejects(() =>
-      providerFetch("https://queue-test.invalid", {
-        signal: AbortSignal.timeout(20),
-      }),
-    );
+    // A real pending fetch keeps the process alive; this mock has no socket.
+    // Use a referenced timer so Node 22 does not exit before cancellation fires.
+    const controller = new AbortController();
+    const deadline = setTimeout(() => controller.abort(new Error("Test deadline")), 20);
+    try {
+      await assert.rejects(() =>
+        providerFetch("https://queue-test.invalid", { signal: controller.signal }),
+      );
+    } finally {
+      clearTimeout(deadline);
+    }
     assert.equal(calls, 1);
     release();
     await first;
