@@ -654,6 +654,7 @@ export function Desk({ section = "discover" }: { section?: Section }) {
             ) : (
               <WorkspaceSplit
                 selected={selected}
+                onClose={() => setSelected(null)}
                 list={resultList}
                 reader={
                   selected && (
@@ -827,10 +828,12 @@ export function Desk({ section = "discover" }: { section?: Section }) {
 }
 function WorkspaceSplit({
   selected,
+  onClose,
   list,
   reader,
 }: {
   selected: AcademicPaper | null;
+  onClose: () => void;
   list: React.ReactNode;
   reader: React.ReactNode;
 }) {
@@ -847,7 +850,12 @@ function WorkspaceSplit({
     return (
       <>
         {list}
-        <Dialog open>
+        <Dialog
+          open
+          onOpenChange={(open) => {
+            if (!open) onClose();
+          }}
+        >
           <DialogContent className="reading-modal" showCloseButton={false}>
             <DialogHeader>
               <DialogTitle className="sr-only">Paper evidence</DialogTitle>
