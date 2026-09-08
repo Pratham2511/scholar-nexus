@@ -129,30 +129,30 @@ export function AuthorView() {
           {/* Author header */}
           <Card className="p-6 mb-4">
             <div className="flex flex-wrap items-start gap-4">
-              <div className="flex h-16 w-16 items-center justify-center rounded-full bg-gradient-to-br from-emerald-500 to-teal-600 text-white text-2xl font-bold shrink-0">
+              <div className="flex h-14 w-14 items-center justify-center rounded-[2px] border border-border-2 bg-surface text-gold font-display text-2xl shrink-0">
                 {profile.name.charAt(0).toUpperCase()}
               </div>
               <div className="flex-1 min-w-0">
-                <h1 className="text-2xl font-bold tracking-tight mb-2">{profile.name}</h1>
+                <h1 className="font-display text-2xl font-normal tracking-tight mb-2 text-text-primary">{profile.name}</h1>
                 {profile.affiliations.length > 0 && (
-                  <div className="flex items-start gap-1.5 text-sm text-muted-foreground mb-2">
-                    <Building2 className="h-4 w-4 mt-0.5 shrink-0" />
+                  <div className="flex items-start gap-1.5 font-ui text-xs text-text-secondary font-light mb-2">
+                    <Building2 className="h-3.5 w-3.5 mt-0.5 shrink-0 text-text-tertiary" />
                     <span>{profile.affiliations.slice(0, 3).join(", ")}</span>
                   </div>
                 )}
-                <div className="flex flex-wrap gap-3 text-sm">
+                <div className="flex flex-wrap gap-3 font-mono text-xs text-text-secondary">
                   <span className="flex items-center gap-1.5">
-                    <FileText className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
-                    <strong>{profile.paperCount.toLocaleString()}</strong> papers
+                    <FileText className="h-3.5 w-3.5 text-gold" />
+                    <strong className="text-text-primary font-medium">{profile.paperCount.toLocaleString()}</strong> papers
                   </span>
                   <span className="flex items-center gap-1.5">
-                    <Quote className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
-                    <strong>{(profile.citationCount?.toLocaleString() ?? "Unknown")}</strong> citations
+                    <Quote className="h-3.5 w-3.5 text-gold" />
+                    <strong className="text-text-primary font-medium">{(profile.citationCount?.toLocaleString() ?? "Unknown")}</strong> citations
                   </span>
                   {profile.hIndex !== null && (
                     <span className="flex items-center gap-1.5">
-                      <Award className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
-                      h-index: <strong>{profile.hIndex}</strong>
+                      <Award className="h-3.5 w-3.5 text-gold" />
+                      h-index: <strong className="text-text-primary font-medium">{profile.hIndex}</strong>
                     </span>
                   )}
                 </div>

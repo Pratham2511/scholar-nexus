@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
+import { CountUp } from "@/components/ui/count-up";
 import {
   User,
   Sparkles,
@@ -180,50 +181,56 @@ export function ProfileView() {
   return (
     <div className="mx-auto max-w-5xl px-4 sm:px-6 py-6 space-y-6">
       <div>
-        <h1 className="text-2xl font-bold tracking-tight flex items-center gap-2">
-          <User className="h-6 w-6 text-emerald-600 dark:text-emerald-400" />
+        <h1 className="font-display text-2xl font-normal text-text-primary flex items-center gap-2">
+          <User className="h-5 w-5 text-gold" />
           Profile
         </h1>
-        <p className="text-sm text-muted-foreground mt-1">
+        <p className="font-ui text-sm text-text-secondary font-light mt-1">
           Manage your researcher profile, favorite topics, and view your activity.
         </p>
       </div>
 
       {/* Stats row */}
       <div className="grid grid-cols-3 gap-3">
-        <Card className="p-4 flex items-center gap-3">
-          <Bookmark className="h-8 w-8 text-emerald-600 dark:text-emerald-400" />
+        <Card className="p-4 flex items-center gap-3 rounded-[3px] border-border bg-surface">
+          <Bookmark className="h-6 w-6 text-gold" />
           <div>
-            <div className="text-2xl font-bold">{data?.stats.savedCount ?? 0}</div>
-            <div className="text-xs text-muted-foreground">Saved papers</div>
+            <div className="font-display text-2xl font-normal text-text-primary">
+              <CountUp end={data?.stats.savedCount ?? 0} />
+            </div>
+            <div className="font-mono text-xs text-text-tertiary uppercase">Saved papers</div>
           </div>
         </Card>
-        <Card className="p-4 flex items-center gap-3">
-          <History className="h-8 w-8 text-emerald-600 dark:text-emerald-400" />
+        <Card className="p-4 flex items-center gap-3 rounded-[3px] border-border bg-surface">
+          <History className="h-6 w-6 text-gold" />
           <div>
-            <div className="text-2xl font-bold">{data?.stats.searchCount ?? 0}</div>
-            <div className="text-xs text-muted-foreground">Searches run</div>
+            <div className="font-display text-2xl font-normal text-text-primary">
+              <CountUp end={data?.stats.searchCount ?? 0} />
+            </div>
+            <div className="font-mono text-xs text-text-tertiary uppercase">Searches run</div>
           </div>
         </Card>
-        <Card className="p-4 flex items-center gap-3">
-          <Quote className="h-8 w-8 text-emerald-600 dark:text-emerald-400" />
+        <Card className="p-4 flex items-center gap-3 rounded-[3px] border-border bg-surface">
+          <Quote className="h-6 w-6 text-gold" />
           <div>
-            <div className="text-2xl font-bold">{exports.length}</div>
-            <div className="text-xs text-muted-foreground">Citations exported</div>
+            <div className="font-display text-2xl font-normal text-text-primary">
+              <CountUp end={exports.length} />
+            </div>
+            <div className="font-mono text-xs text-text-tertiary uppercase">Citations exported</div>
           </div>
         </Card>
       </div>
 
       {/* Profile card */}
-      <Card className="p-5">
+      <Card className="p-5 rounded-[3px] border-border bg-surface">
         <div className="flex items-center justify-between mb-3">
-          <h2 className="font-semibold">Researcher Profile</h2>
+          <h2 className="font-display text-xl font-normal text-text-primary">Researcher Profile</h2>
           {!editing ? (
             <Button variant="outline" size="sm" onClick={() => setEditing(true)}>Edit</Button>
           ) : (
             <div className="flex gap-2">
               <Button variant="ghost" size="sm" onClick={() => setEditing(false)}>Cancel</Button>
-              <Button size="sm" onClick={handleSaveProfile} disabled={savingProfile} className="gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white">
+              <Button size="sm" onClick={handleSaveProfile} disabled={savingProfile} className="gap-1.5">
                 {savingProfile ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Save className="h-3.5 w-3.5" />}
                 Save
               </Button>
@@ -304,21 +311,21 @@ export function ProfileView() {
 
       {/* AI recommendations */}
       {data && data.stats.savedCount > 0 && (
-        <Card className="p-5 bg-gradient-to-br from-emerald-500/5 to-teal-500/5 border-emerald-500/20">
+        <Card className="p-5 bg-surface border-border-2 rounded-[3px]">
           <div className="flex items-center gap-2 mb-3">
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
+            <div className="flex h-8 w-8 items-center justify-center rounded-[2px] bg-surface-2 text-gold">
               <Sparkles className="h-4 w-4" />
             </div>
-            <h2 className="font-semibold">AI-Recommended Topics</h2>
-            {loadingRecs && <Loader2 className="h-3.5 w-3.5 animate-spin text-muted-foreground" />}
+            <h2 className="font-display text-xl font-normal text-text-primary">AI-Recommended Inquiries</h2>
+            {loadingRecs && <Loader2 className="h-3.5 w-3.5 animate-spin text-text-tertiary" />}
           </div>
           {recommendations.length === 0 ? (
-            <p className="text-sm text-muted-foreground flex items-center gap-1.5">
-              <Lightbulb className="h-3.5 w-3.5" />
+            <p className="font-ui text-sm text-text-secondary font-light flex items-center gap-1.5">
+              <Lightbulb className="h-3.5 w-3.5 text-gold" />
               {loadingRecs ? "Analyzing your saved papers…" : "No recommendations yet."}
             </p>
           ) : (
-            <div className="flex flex-wrap gap-1.5">
+            <div className="flex flex-wrap gap-2">
               {recommendations.map((t) => (
                 <button
                   key={t}
@@ -327,7 +334,7 @@ export function ProfileView() {
                     setView("results");
                     void import("@/lib/actions").then((m) => m.runSearch(t));
                   }}
-                  className="rounded-full border border-emerald-500/30 bg-emerald-500/5 px-3 py-1 text-sm text-emerald-700 dark:text-emerald-300 hover:bg-emerald-500/10"
+                  className="rounded-[2px] border border-border-2 bg-surface px-3 py-1 font-mono text-xs text-text-secondary hover:border-gold hover:text-gold transition duration-150"
                 >
                   {t}
                 </button>
@@ -337,10 +344,10 @@ export function ProfileView() {
         </Card>
       )}
 
-      {/* V2: Search Alerts */}
-      <Card className="p-5">
-        <h2 className="font-semibold mb-3 flex items-center gap-2">
-          <Bell className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
+      {/* Search Alerts */}
+      <Card className="p-5 rounded-[3px] border-border bg-surface">
+        <h2 className="font-display text-xl font-normal text-text-primary mb-3 flex items-center gap-2">
+          <Bell className="h-4 w-4 text-gold" />
           Search Alerts
           {alerts.length > 0 && <Badge variant="secondary" className="text-xs">{alerts.length}</Badge>}
         </h2>

@@ -110,11 +110,11 @@ export function LibraryView() {
   return (
     <div className="mx-auto max-w-7xl px-4 sm:px-6 py-6">
       <div className="mb-6">
-        <h1 className="text-2xl font-bold tracking-tight flex items-center gap-2">
-          <Library className="h-6 w-6 text-emerald-600 dark:text-emerald-400" />
+        <h1 className="font-display text-2xl font-normal text-text-primary flex items-center gap-2">
+          <Library className="h-5 w-5 text-gold" />
           {activeCollection ? activeCollection.name : "Saved Library"}
         </h1>
-        <p className="text-sm text-muted-foreground mt-1">
+        <p className="font-ui text-sm text-text-secondary font-light mt-1">
           {loading
             ? "Loading…"
             : displayedPapers.length > 0
@@ -126,38 +126,38 @@ export function LibraryView() {
       </div>
 
       <div className="grid lg:grid-cols-[240px_1fr] gap-6">
-        {/* V2: Collections sidebar */}
+        {/* Collections sidebar */}
         <div className="space-y-3">
-          <Card className="p-3">
+          <Card className="p-3.5 rounded-[3px] border-border bg-surface">
             <div className="flex items-center justify-between mb-2">
-              <h2 className="font-medium text-sm flex items-center gap-1.5">
-                <Folder className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
+              <h2 className="font-ui uppercase tracking-wider text-xs text-text-tertiary font-medium flex items-center gap-1.5">
+                <Folder className="h-3.5 w-3.5 text-gold" />
                 Collections
               </h2>
             </div>
             {/* All Papers button */}
             <button
               onClick={() => setActiveCollectionId(null)}
-              className={`w-full flex items-center justify-between gap-2 rounded-md px-2 py-1.5 text-sm text-left transition ${
+              className={`w-full flex items-center justify-between gap-2 rounded-[2px] px-2 py-1.5 text-xs font-mono transition ${
                 !activeCollectionId
-                  ? "bg-emerald-500/10 text-emerald-700 dark:text-emerald-300"
-                  : "hover:bg-muted/50"
+                  ? "border-l-2 border-gold bg-surface-2 text-text-primary"
+                  : "text-text-secondary hover:bg-surface-2 hover:text-text-primary"
               }`}
             >
               <span className="flex items-center gap-1.5">
                 <BookOpen className="h-3.5 w-3.5" />
                 All Papers
               </span>
-              <Badge variant="outline" className="text-xs">{allSaved.length}</Badge>
+              <Badge variant="outline" className="text-[0.65rem]">{allSaved.length}</Badge>
             </button>
             {/* Per-collection buttons */}
             {collections.map((c) => (
               <div
                 key={c.id}
-                className={`group flex items-center justify-between gap-2 rounded-md px-2 py-1.5 text-sm transition ${
+                className={`group flex items-center justify-between gap-2 rounded-[2px] px-2 py-1.5 text-xs font-mono transition ${
                   activeCollectionId === c.id
-                    ? "bg-emerald-500/10 text-emerald-700 dark:text-emerald-300"
-                    : "hover:bg-muted/50"
+                    ? "border-l-2 border-gold bg-surface-2 text-text-primary"
+                    : "text-text-secondary hover:bg-surface-2 hover:text-text-primary"
                 }`}
               >
                 <button
@@ -197,7 +197,7 @@ export function LibraryView() {
                 size="sm"
                 onClick={handleCreateCollection}
                 disabled={creating || !newCollectionName.trim()}
-                className="h-8 px-2 gap-1 bg-emerald-600 hover:bg-emerald-700 text-white"
+                className="h-8 px-2 gap-1"
               >
                 <Plus className="h-3.5 w-3.5" />
               </Button>
@@ -209,20 +209,20 @@ export function LibraryView() {
         <div>
           {loading ? (
             <div className="flex items-center justify-center py-20">
-              <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+              <span className="font-mono text-xl text-gold tracking-widest">···</span>
             </div>
           ) : displayedPapers.length === 0 ? (
             <Card className="p-10 text-center">
               {activeCollection ? (
                 <>
-                  <FolderPlus className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-                  <h2 className="text-xl font-semibold mb-2">This collection is empty</h2>
-                  <p className="text-muted-foreground mb-6 max-w-md mx-auto">
+                  <FolderPlus className="h-12 w-12 mx-auto text-text-tertiary mb-4" />
+                  <h2 className="font-display text-xl font-normal text-text-primary mb-2">This collection is empty</h2>
+                  <p className="font-ui text-sm text-text-secondary font-light mb-6 max-w-md mx-auto">
                     Add papers from search results using the &quot;Save to…&quot; dropdown on any paper card.
                   </p>
                   <Button
                     onClick={() => setView("home")}
-                    className="gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white"
+                    className="gap-1.5"
                   >
                     <BookOpen className="h-4 w-4" />
                     Start searching
@@ -230,15 +230,15 @@ export function LibraryView() {
                 </>
               ) : (
                 <>
-                  <Library className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-                  <h2 className="text-xl font-semibold mb-2">Your library is empty</h2>
-                  <p className="text-muted-foreground mb-6 max-w-md mx-auto">
+                  <Library className="h-12 w-12 mx-auto text-text-tertiary mb-4" />
+                  <h2 className="font-display text-xl font-normal text-text-primary mb-2">Your library is empty</h2>
+                  <p className="font-ui text-sm text-text-secondary font-light mb-6 max-w-md mx-auto">
                     When you find an interesting paper, click the bookmark button to save it here.
                     Saved papers persist across searches.
                   </p>
                   <Button
                     onClick={() => setView("home")}
-                    className="gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white"
+                    className="gap-1.5"
                   >
                     <BookOpen className="h-4 w-4" />
                     Start searching

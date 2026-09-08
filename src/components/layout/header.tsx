@@ -13,6 +13,7 @@ import {
   UserCircle,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Logo } from "@/components/ui/logo";
 import { cn } from "@/lib/utils";
 import { useEffect } from "react";
 
@@ -61,19 +62,14 @@ export function Header() {
   }, [theme]);
 
   return (
-    <header className="sticky top-0 z-40 w-full border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+    <header className="sticky top-0 z-40 w-full border-b border-border bg-ground">
       <div className="mx-auto flex h-16 max-w-7xl items-center gap-2 px-4 sm:px-6">
         <button
           onClick={() => setView("home")}
-          className="flex items-center gap-2 mr-2 shrink-0"
-          aria-label="ScholarAI home"
+          className="flex items-center gap-2 mr-4 shrink-0"
+          aria-label="ScholarNexus home"
         >
-          <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-gradient-to-br from-emerald-500 to-teal-600 text-white shadow-sm">
-            <BookOpen className="h-5 w-5" />
-          </div>
-          <span className="hidden sm:inline font-semibold text-lg tracking-tight">
-            Scholar<span className="text-emerald-600 dark:text-emerald-400">AI</span>
-          </span>
+          <Logo size="sm" />
         </button>
 
         <nav className="flex flex-1 items-center gap-0.5 sm:gap-1 overflow-x-auto">
@@ -90,14 +86,14 @@ export function Header() {
                 size="sm"
                 onClick={() => setView(item.view)}
                 className={cn(
-                  "h-9 gap-1.5 font-medium",
-                  isActive && "bg-secondary text-secondary-foreground shadow-sm",
+                  "h-8 gap-1.5 font-ui uppercase tracking-wider text-xs",
+                  isActive && "border-b-2 border-gold text-text-primary",
                 )}
               >
-                <Icon className="h-4 w-4" />
+                <Icon className="h-3.5 w-3.5" />
                 <span className="hidden md:inline">{item.label}</span>
                 {badge > 0 && (
-                  <span className="ml-0.5 inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-emerald-600 px-1.5 text-xs font-semibold text-white">
+                  <span className="ml-0.5 inline-flex h-4 min-w-4 items-center justify-center rounded-sm bg-red px-1 font-mono text-[10px] text-ground">
                     {badge}
                   </span>
                 )}
@@ -113,7 +109,7 @@ export function Header() {
           aria-label="Toggle theme"
           className="shrink-0"
         >
-          {theme === "dark" ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
+          {theme === "dark" ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
         </Button>
       </div>
     </header>

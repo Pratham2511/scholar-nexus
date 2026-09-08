@@ -127,7 +127,7 @@ export function NetworkView() {
     const color = d3
       .scaleLinear<string>()
       .domain([0, 50, 100])
-      .range(["#ef4444", "#eab308", "#22c55e"])
+      .range(["#8A6E2E", "#C5A44E", "#5A9E72"])
       .interpolate(d3.interpolateRgb);
 
     // Size scale: log of citation count
@@ -207,11 +207,13 @@ export function NetworkView() {
       .attr("r", (d) => size(d.citationCount ?? 0))
       .attr("fill", (d) => {
         const score = d.relevanceScore;
-        if (score === undefined) return "#64748b"; // slate for non-seed nodes
+        if (score === undefined) return "#5C6159"; // muted text-tertiary for non-seed nodes
         return color(score);
       })
-      .attr("stroke", (d) => (d.isSeed ? "#10b981" : "transparent"))
-      .attr("stroke-width", 2);
+      .attr("stroke", (d) => (d.isSeed ? "#C5A44E" : "transparent"))
+      .attr("stroke-width", 2)
+      .style("transition", "transform 0.2s ease")
+      .style("transform-origin", "center");
 
     // Labels (truncated to first 6 words)
     node
@@ -223,8 +225,9 @@ export function NetworkView() {
       .attr("x", (d) => size(d.citationCount ?? 0) + 4)
       .attr("y", 4)
       .attr("font-size", "10px")
-      .attr("fill", "currentColor")
-      .attr("opacity", 0.8);
+      .attr("font-family", "var(--font-mono)")
+      .attr("fill", "#8D9189")
+      .attr("opacity", 0.85);
 
     // Highlight ring for selected node
     node
@@ -232,9 +235,26 @@ export function NetworkView() {
       .attr("class", "selection-ring")
       .attr("r", (d) => size(d.citationCount ?? 0) + 6)
       .attr("fill", "none")
-      .attr("stroke", "#fbbf24")
+      .attr("stroke", "#4A9E8A")
       .attr("stroke-width", 2)
       .attr("opacity", (d) => (selectedNetworkNodeId === d.id ? 1 : 0));
+
+    // Node scale 1.15 on hover with 0.2s transition
+    node
+      .on("mouseenter", function () {
+        d3.select(this)
+          .selectAll("circle:not(.selection-ring)")
+          .transition()
+          .duration(200)
+          .attr("transform", "scale(1.15)");
+      })
+      .on("mouseleave", function () {
+        d3.select(this)
+          .selectAll("circle:not(.selection-ring)")
+          .transition()
+          .duration(200)
+          .attr("transform", "scale(1)");
+      });
 
     // Click → select node
     node.on("click", (_event, d) => {

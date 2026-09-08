@@ -135,10 +135,10 @@ export function PdfQaChat({ paperId, pdfUrl, paperTitle }: PdfQaChatProps) {
             className={`flex ${m.role === "user" ? "justify-end" : "justify-start"}`}
           >
             <div
-              className={`max-w-[85%] rounded-lg px-3 py-2 text-sm ${
+              className={`max-w-[85%] rounded-[3px] px-3.5 py-2 text-sm ${
                 m.role === "user"
-                  ? "bg-emerald-600 text-white"
-                  : "bg-background border border-border"
+                  ? "bg-gold text-ground font-ui font-medium"
+                  : "bg-surface border border-border text-text-primary font-ui font-light"
               }`}
             >
               {m.role === "assistant" && m.confidence && (
@@ -152,8 +152,8 @@ export function PdfQaChat({ paperId, pdfUrl, paperTitle }: PdfQaChatProps) {
         ))}
         {loading && (
           <div className="flex justify-start">
-            <div className="bg-background border border-border rounded-lg px-3 py-2 flex items-center gap-2 text-sm text-muted-foreground">
-              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+            <div className="bg-surface border border-border rounded-[3px] px-3 py-2 flex items-center gap-2 text-xs font-mono text-text-tertiary">
+              <span className="tracking-widest text-gold">···</span>
               Reading the PDF…
             </div>
           </div>
@@ -179,7 +179,6 @@ export function PdfQaChat({ paperId, pdfUrl, paperTitle }: PdfQaChatProps) {
           type="submit"
           disabled={loading || !input.trim()}
           size="sm"
-          className="gap-1.5 bg-violet-600 hover:bg-violet-700 text-white"
         >
           <Send className="h-3.5 w-3.5" />
         </Button>
@@ -190,14 +189,14 @@ export function PdfQaChat({ paperId, pdfUrl, paperTitle }: PdfQaChatProps) {
 
 function ConfidenceBadge({ confidence }: { confidence: "high" | "medium" | "low" | "cached" }) {
   const map: Record<string, { label: string; className: string }> = {
-    high: { label: "High confidence", className: "bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border-emerald-500/30" },
-    medium: { label: "Medium confidence", className: "bg-yellow-500/10 text-yellow-700 dark:text-yellow-300 border-yellow-500/30" },
-    low: { label: "Low confidence", className: "bg-red-500/10 text-red-700 dark:text-red-300 border-red-500/30" },
-    cached: { label: "Cached answer", className: "bg-blue-500/10 text-blue-700 dark:text-blue-300 border-blue-500/30" },
+    high: { label: "High confidence", className: "text-green-bright border-green-bright/40" },
+    medium: { label: "Medium confidence", className: "text-gold border-gold/40" },
+    low: { label: "Low confidence", className: "text-danger border-danger/40" },
+    cached: { label: "Cached answer", className: "text-teal border-teal/40" },
   };
   const cfg = map[confidence];
   return (
-    <Badge variant="outline" className={`text-xs ${cfg.className}`}>
+    <Badge variant="outline" className={`text-[0.65rem] uppercase font-mono ${cfg.className}`}>
       {cfg.label}
     </Badge>
   );

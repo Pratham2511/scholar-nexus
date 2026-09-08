@@ -66,6 +66,8 @@ import {
   screeningCSV,
 } from "@/lib/workspace/exports";
 import { useWorkspace } from "./use-workspace";
+import { Logo } from "@/components/ui/logo";
+import { CountUp } from "@/components/ui/count-up";
 
 type Section = "discover" | "projects" | "reading" | "updates";
 type Change = (fn: (s: Workspace) => void) => Promise<boolean>;
@@ -284,7 +286,11 @@ export function Desk({ section = "discover" }: { section?: Section }) {
     <div className="desk-list">
       {searching && !result && (
         <div className="desk-loading" role="status">
-          <RefreshCw className="spin" />
+          <div className="desk-loading-dots" aria-hidden="true">
+            <span className="loading-dot-1">·</span>
+            <span className="loading-dot-2">·</span>
+            <span className="loading-dot-3">·</span>
+          </div>
           <h2>Searching academic sources…</h2>
           <p>You can edit your query while the sources respond.</p>
         </div>
@@ -380,13 +386,10 @@ export function Desk({ section = "discover" }: { section?: Section }) {
       <header className="desk-header">
         <Link
           href="/discover"
-          className="wordmark"
           aria-label="ScholarNexus home"
+          className="inline-flex items-center"
         >
-          <span className="folio-mark" aria-hidden="true">
-            [n]
-          </span>
-          Scholar<span>Nexus</span>
+          <Logo size="sm" />
         </Link>
         <nav aria-label="Main navigation">
           {(["discover", "projects", "reading", "updates"] as Section[]).map(
@@ -900,7 +903,10 @@ function PaperRow({
   onCompare: () => void;
 }) {
   return (
-    <article className={"paper-row" + (selected ? " selected" : "")}>
+    <article
+      className={"paper-row" + (selected ? " selected" : "")}
+      style={{ animationDelay: `${Math.min(index * 0.04, 0.3)}s` }}
+    >
       <span className="paper-number">{String(index + 1).padStart(2, "0")}</span>
       <div className="paper-main">
         <div className="paper-meta">
@@ -1734,7 +1740,11 @@ function Projects({
                   (d) => (
                     <div key={d}>
                       <strong>
-                        {active.members.filter((m) => m.decision === d).length}
+                        <CountUp
+                          end={
+                            active.members.filter((m) => m.decision === d).length
+                          }
+                        />
                       </strong>
                       <span>{d}</span>
                     </div>
