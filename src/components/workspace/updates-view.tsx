@@ -1,17 +1,18 @@
 "use client";
 
-import { useState } from "react";
+import { useState, type FormEvent } from "react";
 import {
   Bell,
   CheckCircle2,
   Bookmark,
   Plus,
   Trash2,
-  Radio,
   BookOpen,
   ExternalLink,
-  ArrowRight,
-  Sparkles,
+  FileText,
+  Search,
+  Check,
+  Radio,
 } from "lucide-react";
 import type { Workspace } from "@/lib/workspace/schema";
 import type { Paper } from "./paper-card";
@@ -42,284 +43,376 @@ export function UpdatesView({
 }: UpdatesViewProps) {
   const [newAlertQuery, setNewAlertQuery] = useState("");
   const [frequency, setFrequency] = useState<"daily" | "weekly">("weekly");
-  const [isCreating, setIsCreating] = useState(false);
 
   const unreadCount = inbox.filter((i) => !i.read).length;
 
-  const handleCreate = (e: React.FormEvent) => {
+  const handleCreate = (e: FormEvent) => {
     e.preventDefault();
     if (!newAlertQuery.trim()) return;
     onCreateAlert(newAlertQuery.trim(), frequency);
     setNewAlertQuery("");
-    setIsCreating(false);
   };
 
   return (
-    <div className="space-y-8">
-      {/* Header Deck */}
-      <div className="space-y-5">
-        <div className="hud-badge iris py-1.5 px-4 text-xs sm:text-sm font-mono tracking-wider font-semibold">
-          <span className="hud-dot animate-pulse-signal" />
-          <span>CONTINUOUS MONITORING // {alerts.length} ALERTS ACTIVE</span>
+    <div className="space-y-7">
+      {/* ============ SECTION MASTHEAD ============ */}
+      <div className="space-y-3 animate-fade-up">
+        <div className="flex flex-wrap items-center gap-3">
+          <span className="section-index">
+            <span className="num">06</span> / Alerts
+          </span>
+          <span className="h-px flex-1 bg-[var(--border-dim)]" />
+          <span className="hud-badge brass py-1">
+            {unreadCount > 0 && <span className="hud-dot animate-pulse-signal" />}
+            {unreadCount} unread · {alerts.length} alerts
+          </span>
         </div>
+        <h1
+          className="text-3xl sm:text-4xl lg:text-[2.75rem] font-bold font-display leading-[1.08] text-[var(--text-primary)]"
+          style={{ fontOpticalSizing: "auto" }}
+        >
+          Living searches &{" "}
+          <span className="font-serif-italic text-[var(--color-primary-bright)]">
+            updates.
+          </span>
+        </h1>
+        <p className="text-[var(--text-secondary)] text-base max-w-2xl leading-relaxed">
+          Standing queries that sweep scholarly repositories on your chosen
+          cadence. New matches land in the inbox; alerts keep running until you
+          delete them.
+        </p>
+      </div>
 
-        <div className="flex flex-wrap items-end justify-between gap-6">
-          <div className="max-w-3xl space-y-2.5">
-            <h1 className="text-3xl sm:text-5xl lg:text-6xl font-black tracking-tight text-white font-display">
-              Research Feed & <span className="text-[var(--color-primary-bright)]">Alerts</span>
-            </h1>
-            <p className="text-base sm:text-lg text-slate-300 leading-relaxed font-sans">
-              Continuous repository sweeps monitoring newly published preprints and journal releases matching your topics.
-            </p>
-          </div>
-
-          <div className="flex items-center gap-3 font-mono text-xs sm:text-sm">
+      {/* ============ TWO-COLUMN WORKSPACE ============ */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+        {/* ---------- LEFT: INBOX ---------- */}
+        <section className="lg:col-span-7 space-y-4">
+          <div className="flex flex-wrap items-center gap-2">
+            <h3 className="section-index">
+              <span className="num">06.1</span> / Inbox
+            </h3>
+            <span className="h-px flex-1 bg-[var(--border-dim)]" />
+            <span className="font-mono text-[11px] text-[var(--text-muted)]">
+              {inbox.length} items · {unreadCount} unread
+            </span>
             {unreadCount > 0 && (
               <button
                 type="button"
                 onClick={onMarkAllRead}
-                className="btn btn-secondary h-11 px-4 text-xs sm:text-sm font-semibold"
+                className="btn btn-secondary h-8 px-3 text-[11px] font-mono font-semibold uppercase tracking-wider"
               >
-                <CheckCircle2 className="w-4 h-4 text-[var(--color-green)]" />
-                <span>ACKNOWLEDGE ALL</span>
+                <CheckCircle2 className="w-3.5 h-3.5 text-[var(--color-green)]" />
+                Mark all read
               </button>
             )}
-
-            <button
-              type="button"
-              onClick={() => setIsCreating(true)}
-              className="btn btn-primary h-11 px-5 text-xs sm:text-sm font-bold uppercase tracking-wider"
-            >
-              <Plus className="w-4 h-4" />
-              <span>NEW ALERT</span>
-            </button>
-          </div>
-        </div>
-      </div>
-
-      {/* Create Alert Console */}
-      {isCreating && (
-        <form
-          onSubmit={handleCreate}
-          className="tech-card bracketed p-6 sm:p-8 space-y-5 border-indigo-500/30 font-mono text-xs sm:text-sm shadow-xl"
-        >
-          <div className="flex items-center gap-2.5">
-            <span className="hud-badge iris text-xs font-semibold">CONFIGURE</span>
-            <h3 className="text-base font-bold text-white uppercase tracking-wide">
-              Configure Standing Repository Sweep
-            </h3>
-          </div>
-          <div className="space-y-1.5">
-            <label className="text-xs text-slate-300 uppercase tracking-wider font-semibold">
-              Research Inquiry / Concept to Monitor
-            </label>
-            <input
-              type="text"
-              required
-              value={newAlertQuery}
-              onChange={(e) => setNewAlertQuery(e.target.value)}
-              placeholder="e.g. Temporal graph neural networks, APT detection, LLM reasoning"
-              className="h-11 w-full rounded-lg border border-indigo-500/25 bg-[var(--bg-obsidian)] px-3 text-sm text-white placeholder:text-slate-400 focus:border-[var(--color-primary)] focus:outline-none transition-all font-sans"
-            />
           </div>
 
-          <div className="space-y-2">
-            <label className="text-xs text-slate-300 uppercase tracking-wider font-semibold">
-              Sweep Cadence
-            </label>
-            <div className="flex items-center gap-6 pt-1">
-              <label className="flex items-center gap-2.5 text-sm text-slate-200 cursor-pointer font-sans">
-                <input
-                  type="radio"
-                  name="freq"
-                  checked={frequency === "daily"}
-                  onChange={() => setFrequency("daily")}
-                  className="h-4 w-4 text-[var(--color-primary)]"
-                />
-                <span>Daily Digest Sweep</span>
-              </label>
-              <label className="flex items-center gap-2.5 text-sm text-slate-200 cursor-pointer font-sans">
-                <input
-                  type="radio"
-                  name="freq"
-                  checked={frequency === "weekly"}
-                  onChange={() => setFrequency("weekly")}
-                  className="h-4 w-4 text-[var(--color-primary)]"
-                />
-                <span>Weekly Synthesis Sweep</span>
-              </label>
+          {inbox.length > 0 && (
+            <div className="kpi-card">
+              <span className="kpi-label">Unread matches</span>
+              <span className="kpi-value">{unreadCount}</span>
+              <span className="kpi-sub">awaiting your review</span>
             </div>
-          </div>
+          )}
 
-          <div className="flex justify-end gap-3 pt-2 font-mono text-xs sm:text-sm">
-            <button
-              type="button"
-              onClick={() => setIsCreating(false)}
-              className="btn btn-secondary h-10 px-4 text-xs sm:text-sm font-semibold"
-            >
-              CANCEL
-            </button>
-            <button
-              type="submit"
-              className="btn btn-primary h-10 px-5 text-xs sm:text-sm font-bold uppercase tracking-wider"
-            >
-              SAVE ALERT
-            </button>
-          </div>
-        </form>
-      )}
-
-      {/* Active Monitored Topics Bar */}
-      {alerts.length > 0 && (
-        <div className="tech-card bracketed p-4 flex flex-wrap items-center gap-2 font-mono text-xs">
-          <span className="text-[var(--text-muted)] uppercase text-[10px] mr-2">
-            ACTIVE MONITORS:
-          </span>
-          {alerts.map((al) => (
-            <div
-              key={al.id}
-              className="flex items-center gap-2 rounded bg-white/[0.04] border border-[var(--border-dim)] px-2.5 py-1 text-slate-200"
-            >
-              <span>{al.query}</span>
-              <span className="text-[10px] text-[var(--color-amber)] capitalize bg-[var(--color-amber)]/10 px-1 rounded">
-                {al.frequency}
-              </span>
-              <button
-                type="button"
-                onClick={() => onDeleteAlert(al.id)}
-                className="text-slate-500 hover:text-rose-400 ml-1"
-                title="Delete alert"
-              >
-                <Trash2 className="w-3 h-3" />
-              </button>
-            </div>
-          ))}
-        </div>
-      )}
-
-      {/* Feed Stream */}
-      {inbox.length > 0 ? (
-        <div className="space-y-4">
-          {inbox.map((item) => {
-            const paper = item.paper as unknown as Paper;
-            const isSaved = savedPaperIds.has(paper.id);
-            const access = resolvePaperAccess(paper);
-
-            return (
-              <div
-                key={item.id}
-                className={`tech-card interactive bracketed p-6 sm:p-7 space-y-3.5 transition-all ${
-                  item.read ? "opacity-75" : "border-indigo-500/30"
-                }`}
-              >
-                <div className="flex flex-wrap items-center justify-between gap-2.5 font-mono text-xs sm:text-sm">
-                  <div className="flex items-center gap-2.5">
-                    <span
-                      className={`h-2.5 w-2.5 rounded-full ${
-                        item.read ? "bg-slate-600" : "bg-[var(--color-primary-bright)] animate-pulse"
-                      }`}
-                    />
-                    <span className="text-indigo-400 font-semibold text-xs sm:text-sm">
-                      MATCH: &ldquo;{alerts.find((a) => a.id === item.alertId)?.query || "Monitored Query"}&rdquo;
-                    </span>
-                    <span className="text-slate-400 text-xs">
-                      • {new Date(item.discoveredAt).toLocaleDateString()}
-                    </span>
-                  </div>
-
-                  {!item.read && (
-                    <button
-                      type="button"
-                      onClick={() => onMarkRead(item.id)}
-                      className="text-slate-400 hover:text-white text-xs font-semibold"
-                    >
-                      MARK READ
-                    </button>
-                  )}
-                </div>
-
-                <h3 className="text-lg sm:text-xl font-bold text-white font-display leading-snug">
-                  {paper.title}
-                </h3>
-
-                <p className="text-sm sm:text-base text-slate-300 font-sans">
-                  {paper.authors?.slice(0, 3).join(", ")}
-                  {paper.authors && paper.authors.length > 3 ? " et al." : ""} •{" "}
-                  {paper.year || "Year unknown"} • {paper.venue || "Preprint Repository"}
-                </p>
-
-                {paper.abstract && (
-                  <p className="text-sm sm:text-base text-slate-200 line-clamp-2 leading-relaxed font-sans">
-                    {paper.abstract}
-                  </p>
-                )}
-
-                <div className="mt-5 flex flex-wrap items-center justify-between gap-3 pt-4 border-t border-indigo-500/20 font-mono text-xs sm:text-sm">
-                  <div className="flex items-center gap-3">
-                    <button
-                      type="button"
-                      onClick={() => onOpenReader(paper)}
-                      className="btn btn-primary h-9 px-4 text-xs font-bold"
-                    >
-                      <BookOpen className="w-4 h-4" />
-                      <span>READER</span>
-                    </button>
-
-                    {access.primaryAction && (
-                      <a
-                        href={access.primaryAction.url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="btn btn-secondary h-9 px-4 text-xs font-semibold"
-                      >
-                        <ExternalLink className="w-3.5 h-3.5 text-[var(--color-primary-bright)]" />
-                        <span>{access.primaryAction.label}</span>
-                      </a>
-                    )}
-                  </div>
-
-                  <button
-                    type="button"
-                    onClick={() => onToggleSave(paper)}
-                    className={`rounded-lg border px-3 py-1.5 text-xs sm:text-sm font-semibold transition-all ${
-                      isSaved
-                        ? "border-[var(--color-primary)] bg-[var(--color-primary)]/20 text-white shadow-[0_0_10px_rgba(99,102,241,0.3)]"
-                        : "border-indigo-500/20 text-slate-300 hover:border-[var(--color-primary)] hover:text-white"
+          {inbox.length > 0 ? (
+            <div className="space-y-3 max-h-96 overflow-y-auto pr-1">
+              {inbox.map((item) => {
+                const paper = item.paper;
+                const isSaved = savedPaperIds.has(paper.id);
+                const access = resolvePaperAccess(paper);
+                const alert = alerts.find((a) => a.id === item.alertId);
+                return (
+                  <article
+                    key={item.id}
+                    className={`tech-card bracketed p-4 sm:p-5 space-y-3 transition-all ${
+                      item.read ? "opacity-65" : ""
                     }`}
                   >
-                    <Bookmark className={`w-4 h-4 inline mr-1.5 ${isSaved ? "fill-current text-indigo-400" : ""}`} />
-                    <span>{isSaved ? "SAVED" : "SAVE TO LIBRARY"}</span>
-                  </button>
-                </div>
+                    {/* Header row — dot, matched alert, discoveredAt, mark read */}
+                    <div className="flex flex-wrap items-center gap-2 font-mono text-[11px]">
+                      <span
+                        className={`hud-dot ${
+                          !item.read
+                            ? "animate-pulse-signal text-[var(--color-primary-bright)]"
+                            : "text-[var(--text-faint)]"
+                        }`}
+                      />
+                      {alert && (
+                        <span
+                          className="text-[var(--color-primary-bright)] uppercase tracking-wider font-semibold truncate max-w-[260px]"
+                          title={alert.query}
+                        >
+                          Match · &ldquo;{alert.query}&rdquo;
+                        </span>
+                      )}
+                      <span className="text-[var(--text-muted)]">
+                        {new Date(item.discoveredAt).toLocaleDateString(
+                          undefined,
+                          { month: "short", day: "numeric", year: "numeric" },
+                        )}
+                      </span>
+                      <span className="ml-auto">
+                        {!item.read && (
+                          <button
+                            type="button"
+                            onClick={() => onMarkRead(item.id)}
+                            className="btn btn-ghost h-7 px-2 text-[10px] font-mono font-semibold uppercase tracking-wider"
+                          >
+                            <Check className="w-3 h-3" />
+                            Mark read
+                          </button>
+                        )}
+                      </span>
+                    </div>
+
+                    {/* Title */}
+                    <h3
+                      onClick={() => onOpenReader(paper)}
+                      className="text-base sm:text-lg font-semibold font-display text-[var(--text-primary)] leading-snug cursor-pointer hover:text-[var(--color-primary-bright)] transition-colors line-clamp-2"
+                      style={{ fontOpticalSizing: "auto" }}
+                    >
+                      {paper.title}
+                    </h3>
+
+                    {/* Mono metadata */}
+                    <p className="font-mono text-[11px] text-[var(--text-muted)] uppercase tracking-wider">
+                      {paper.authors.length > 0
+                        ? `${paper.authors.slice(0, 3).join(", ")}${paper.authors.length > 3 ? " et al." : ""}`
+                        : "Unknown authors"}
+                      {paper.year ? ` · ${paper.year}` : ""}
+                      {paper.venue ? ` · ${paper.venue}` : ""}
+                    </p>
+
+                    {/* Actions */}
+                    <div className="flex flex-wrap items-center gap-2 pt-1">
+                      <button
+                        type="button"
+                        onClick={() => onOpenReader(paper)}
+                        className="btn btn-primary h-8 px-3 text-[11px] font-mono font-bold uppercase tracking-wider"
+                      >
+                        <BookOpen className="w-3.5 h-3.5" />
+                        Reader
+                      </button>
+                      {access.primaryAction && (
+                        <a
+                          href={access.primaryAction.url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className={`btn h-8 px-3 text-[11px] font-mono font-semibold uppercase tracking-wider ${
+                            access.hasDirectPdf ? "btn-emerald" : "btn-secondary"
+                          }`}
+                        >
+                          {access.hasDirectPdf && (
+                            <FileText className="w-3.5 h-3.5" />
+                          )}
+                          <span>{access.primaryAction.label}</span>
+                          <ExternalLink className="w-3 h-3 opacity-70" />
+                        </a>
+                      )}
+                      <button
+                        type="button"
+                        onClick={() => onToggleSave(paper)}
+                        className={`btn h-8 px-3 text-[11px] font-mono font-semibold uppercase tracking-wider ${
+                          isSaved ? "btn-amber" : "btn-ghost"
+                        }`}
+                        title={isSaved ? "Saved to library" : "Save to library"}
+                        aria-pressed={isSaved}
+                      >
+                        <Bookmark
+                          className={`w-3.5 h-3.5 ${
+                            isSaved ? "fill-current" : ""
+                          }`}
+                        />
+                        {isSaved ? "Saved" : "Save"}
+                      </button>
+                    </div>
+                  </article>
+                );
+              })}
+            </div>
+          ) : (
+            <div className="tech-card bracketed p-8 sm:p-10 text-center space-y-4">
+              <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-xl border border-[var(--border-primary-dim)] bg-[rgba(58, 157, 124,0.06)] text-[var(--color-primary-bright)]">
+                <Bell className="h-7 w-7" />
               </div>
-            );
-          })}
-        </div>
-      ) : (
-        <div className="tech-card bracketed p-16 text-center max-w-xl mx-auto space-y-5">
-          <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-xl bg-indigo-950/40 border border-indigo-500/40 text-indigo-400 shadow-[0_0_25px_rgba(99,102,241,0.3)]">
-            <Bell className="h-8 w-8" />
-          </div>
-          <div className="space-y-2">
-            <h3 className="text-2xl font-bold text-white font-display">
-              Research Feed is Clear
+              <div className="space-y-1.5">
+                <h4
+                  className="text-lg sm:text-xl font-bold font-display text-[var(--text-primary)]"
+                  style={{ fontOpticalSizing: "auto" }}
+                >
+                  The inbox is quiet
+                </h4>
+                <p className="text-sm text-[var(--text-secondary)] leading-relaxed max-w-md mx-auto">
+                  New records matched by your standing queries arrive here. In
+                  local mode there is no background worker, so the inbox stays
+                  empty — schedule a worker against the server alert runner to
+                  populate this stream.
+                </p>
+              </div>
+            </div>
+          )}
+        </section>
+
+        {/* ---------- RIGHT: ALERTS MANAGEMENT ---------- */}
+        <section className="lg:col-span-5 space-y-4">
+          <div className="flex flex-wrap items-center gap-2">
+            <h3 className="section-index">
+              <span className="num">06.2</span> / Standing queries
             </h3>
-            <p className="text-sm sm:text-base text-slate-300 leading-relaxed">
-              Create continuous research monitors to automatically track and receive newly indexed papers matching your topics.
-            </p>
+            <span className="h-px flex-1 bg-[var(--border-dim)]" />
+            <span className="font-mono text-[11px] text-[var(--text-muted)]">
+              {alerts.length} active
+            </span>
           </div>
-          <div className="pt-2">
-            <button
-              type="button"
-              onClick={() => setIsCreating(true)}
-              className="btn btn-primary h-11 px-6 text-xs sm:text-sm font-mono font-bold uppercase tracking-wider"
-            >
-              <Plus className="w-4.5 h-4.5" />
-              <span>CONFIGURE MONITOR</span>
-            </button>
-          </div>
-        </div>
-      )}
+
+          {/* New alert form */}
+          <form
+            onSubmit={handleCreate}
+            className="tech-card bracketed p-5 space-y-4"
+          >
+            <div className="flex items-center gap-2">
+              <Radio className="w-4 h-4 text-[var(--color-primary)]" />
+              <h4 className="section-index">New standing query</h4>
+            </div>
+
+            <div className="search-field flex items-center gap-2 px-3">
+              <Search className="w-4 h-4 text-[var(--color-primary)]" />
+              <input
+                type="text"
+                required
+                value={newAlertQuery}
+                onChange={(e) => setNewAlertQuery(e.target.value)}
+                placeholder="Topic or phrase to monitor…"
+                className="flex-1 bg-transparent border-0 outline-none text-[var(--text-primary)] placeholder:text-[var(--text-faint)] text-sm py-2.5"
+                aria-label="Alert query"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <span className="font-mono text-[10px] uppercase tracking-wider text-[var(--text-muted)]">
+                Cadence
+              </span>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setFrequency("daily")}
+                  className={`btn h-9 px-4 text-xs font-mono font-bold uppercase tracking-wider ${
+                    frequency === "daily" ? "btn-primary" : "btn-secondary"
+                  }`}
+                  aria-pressed={frequency === "daily"}
+                >
+                  Daily
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setFrequency("weekly")}
+                  className={`btn h-9 px-4 text-xs font-mono font-bold uppercase tracking-wider ${
+                    frequency === "weekly" ? "btn-emerald" : "btn-secondary"
+                  }`}
+                  aria-pressed={frequency === "weekly"}
+                >
+                  Weekly
+                </button>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-end pt-1">
+              <button
+                type="submit"
+                disabled={!newAlertQuery.trim()}
+                className="btn btn-primary h-9 px-4 text-xs font-mono font-bold uppercase tracking-wider disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <Plus className="w-3.5 h-3.5" />
+                Create Alert
+              </button>
+            </div>
+          </form>
+
+          {/* Alerts list or empty state */}
+          {alerts.length > 0 ? (
+            <div className="space-y-3 max-h-96 overflow-y-auto pr-1">
+              {alerts.map((al) => (
+                <article
+                  key={al.id}
+                  className="tech-card bracketed p-4 sm:p-5 space-y-2.5"
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="space-y-1.5 min-w-0 flex-1">
+                      <h4
+                        className="text-base font-semibold font-display text-[var(--text-primary)] leading-snug line-clamp-2"
+                        style={{ fontOpticalSizing: "auto" }}
+                      >
+                        {al.query}
+                      </h4>
+                      <div className="flex flex-wrap items-center gap-2 font-mono text-[10px] text-[var(--text-muted)] uppercase tracking-wider">
+                        <span
+                          className={`hud-badge py-1 px-2 text-[10px] ${
+                            al.frequency === "daily" ? "brass" : "green"
+                          }`}
+                        >
+                          {al.frequency === "daily" && (
+                            <span className="hud-dot" />
+                          )}
+                          {al.frequency}
+                        </span>
+                        <span>
+                          Last run:{" "}
+                          {al.lastRunAt
+                            ? new Date(al.lastRunAt).toLocaleDateString(
+                                undefined,
+                                {
+                                  month: "short",
+                                  day: "numeric",
+                                  year: "numeric",
+                                },
+                              )
+                            : "Never"}
+                        </span>
+                        <span className="text-[var(--text-faint)]">·</span>
+                        <span>
+                          Created{" "}
+                          {new Date(al.createdAt).toLocaleDateString(
+                            undefined,
+                            { month: "short", day: "numeric" },
+                          )}
+                        </span>
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => onDeleteAlert(al.id)}
+                      className="btn btn-ghost h-8 w-8 p-0 text-[var(--text-muted)] hover:text-[var(--color-red)] hover:border-[var(--border-red-dim)]"
+                      title="Delete alert"
+                      aria-label={`Delete alert: ${al.query}`}
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
+                </article>
+              ))}
+            </div>
+          ) : (
+            <div className="tech-card bracketed p-6 text-center space-y-3">
+              <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-lg border border-[var(--border-dim)] bg-white/[0.02] text-[var(--text-muted)]">
+                <Radio className="h-6 w-6" />
+              </div>
+              <div className="space-y-1">
+                <h4
+                  className="text-base font-semibold font-display text-[var(--text-primary)]"
+                  style={{ fontOpticalSizing: "auto" }}
+                >
+                  No standing queries yet
+                </h4>
+                <p className="text-xs text-[var(--text-secondary)] leading-relaxed max-w-xs mx-auto">
+                  Compose a query above to start monitoring a topic. Saved
+                  alerts appear here.
+                </p>
+              </div>
+            </div>
+          )}
+        </section>
+      </div>
     </div>
   );
 }

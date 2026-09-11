@@ -3,8 +3,8 @@
 import { useEffect, useRef } from "react";
 
 /**
- * ScholarNexus Academic Ambient Cursor
- * - Refined, zero-delay warm gold pointer follower
+ * KIVO Ambient Cursor
+ * - Refined, zero-delay brass pointer follower
  * - Native pointer is 100% active, crisp, and lag-free
  * - Seamlessly accents interactive elements with a warm gold ambient aura
  */
@@ -68,15 +68,15 @@ export function CustomCursor() {
           ring.style.height = "40px";
           ring.style.marginLeft = "-20px";
           ring.style.marginTop = "-20px";
-          ring.style.borderColor = "rgba(129, 140, 248, 0.7)";
-          ring.style.backgroundColor = "rgba(99, 102, 241, 0.08)";
-          ring.style.boxShadow = "0 0 16px rgba(99, 102, 241, 0.25)";
+          ring.style.borderColor = "rgba(92, 196, 160, 0.7)";
+          ring.style.backgroundColor = "rgba(58, 157, 124, 0.08)";
+          ring.style.boxShadow = "0 0 16px rgba(58, 157, 124, 0.25)";
         } else {
           ring.style.width = "28px";
           ring.style.height = "28px";
           ring.style.marginLeft = "-14px";
           ring.style.marginTop = "-14px";
-          ring.style.borderColor = "rgba(129, 140, 248, 0.35)";
+          ring.style.borderColor = "rgba(92, 196, 160, 0.35)";
           ring.style.backgroundColor = "transparent";
           ring.style.boxShadow = "none";
         }
@@ -128,13 +128,13 @@ export function CustomCursor() {
       {/* Precision Micro Point */}
       <div
         ref={dotRef}
-        className="fixed top-0 left-0 w-1.5 h-1.5 -ml-[3px] -mt-[3px] rounded-full bg-[#818cf8] opacity-0 transition-opacity duration-150 will-change-transform shadow-[0_0_8px_#818cf8]"
+        className="fixed top-0 left-0 w-1.5 h-1.5 -ml-[3px] -mt-[3px] rounded-full bg-[#5cc4a0] opacity-0 transition-opacity duration-150 will-change-transform shadow-[0_0_8px_#5cc4a0]"
       />
 
-      {/* Radiant Iris Ambient Ring */}
+      {/* Radiant Brass Ambient Ring */}
       <div
         ref={ringRef}
-        className="fixed top-0 left-0 w-7 h-7 -ml-3.5 -mt-3.5 rounded-full border border-[#818cf8]/35 opacity-0 transition-[width,height,margin,border-color,background-color,box-shadow,opacity] duration-200 ease-out will-change-transform"
+        className="fixed top-0 left-0 w-7 h-7 -ml-3.5 -mt-3.5 rounded-full border border-[#5cc4a0]/35 opacity-0 transition-[width,height,margin,border-color,background-color,box-shadow,opacity] duration-200 ease-out will-change-transform"
       />
     </div>
   );

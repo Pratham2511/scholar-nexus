@@ -61,7 +61,7 @@ export async function searchCrossref(
   if (process.env.ACADEMIC_CONTACT_EMAIL) url.searchParams.set('mailto', process.env.ACADEMIC_CONTACT_EMAIL);
 
   const res = await providerFetch(url, {
-    headers: { Accept: "application/json", "User-Agent": "ScholarNexus/3.0" },
+    headers: { Accept: "application/json", "User-Agent": "KIVO/2.0 (mailto:research@kivo.local)" },
     signal,
   });
   if (res.status === 404 && exact) return [];

@@ -8,9 +8,8 @@ import {
   BookOpen,
   Bell,
   Download,
-  GraduationCap,
-  Activity,
-  Sparkles,
+  HardDrive,
+  Telescope,
 } from "lucide-react";
 import type { StorageStatus } from "../desk/use-workspace";
 
@@ -33,6 +32,21 @@ interface WorkspaceShellProps {
   children: React.ReactNode;
 }
 
+const NAV_ITEMS: {
+  id: ActiveSection;
+  index: string;
+  label: string;
+  short: string;
+  icon: typeof Compass;
+}[] = [
+  { id: "discover", index: "01", label: "Discover", short: "Find", icon: Compass },
+  { id: "reading", index: "02", label: "Reader", short: "Read", icon: BookOpen },
+  { id: "saved", index: "03", label: "Library", short: "Saved", icon: Bookmark },
+  { id: "projects", index: "04", label: "Projects", short: "Work", icon: FolderGit2 },
+  { id: "compare", index: "05", label: "Compare", short: "Compare", icon: Scale },
+  { id: "updates", index: "06", label: "Alerts", short: "Alerts", icon: Bell },
+];
+
 export function WorkspaceShell({
   currentSection,
   onNavigate,
@@ -43,136 +57,131 @@ export function WorkspaceShell({
   onExportSnapshot,
   children,
 }: WorkspaceShellProps) {
-  const navItems = [
-    {
-      id: "discover" as const,
-      label: "Discover",
-      icon: Compass,
-      badge: null,
-    },
-    {
-      id: "reading" as const,
-      label: "Reader",
-      icon: BookOpen,
-      badge: null,
-    },
-    {
-      id: "saved" as const,
-      label: "Library",
-      icon: Bookmark,
-      badge: savedCount > 0 ? savedCount : null,
-    },
-    {
-      id: "projects" as const,
-      label: "Projects",
-      icon: FolderGit2,
-      badge: null,
-    },
-    {
-      id: "compare" as const,
-      label: "Compare",
-      icon: Scale,
-      badge: compareCount > 0 ? compareCount : null,
-    },
-    {
-      id: "updates" as const,
-      label: "Alerts",
-      icon: Bell,
-      badge: unreadAlertsCount > 0 ? unreadAlertsCount : null,
-    },
-  ];
+  const badges: Partial<Record<ActiveSection, number>> = {
+    saved: savedCount,
+    compare: compareCount,
+    updates: unreadAlertsCount,
+  };
 
   return (
-    <div className="min-h-screen flex flex-col text-slate-100 antialiased selection:bg-indigo-500/30 selection:text-indigo-100 relative z-10">
-      {/* Top Application Header - High-profile highlighted status */}
-      <header className="sticky top-0 z-40 w-full border-b border-indigo-500/25 bg-[#050813]/95 backdrop-blur-2xl shadow-[0_4px_35px_rgba(0,0,0,0.85),0_1px_0_rgba(99,102,241,0.2)]">
-        <div className="mx-auto flex h-20 sm:h-22 max-w-[1880px] w-full items-center justify-between px-5 sm:px-8 lg:px-12 xl:px-14">
-          {/* Logo & Brand Identity */}
-          <div className="flex items-center gap-6 sm:gap-10">
-            <button
-              type="button"
-              onClick={() => onNavigate("discover")}
-              className="flex items-center gap-3.5 text-left focus:outline-none group"
-            >
-              <div className="flex h-11 w-11 sm:h-12 sm:w-12 items-center justify-center rounded-xl bg-indigo-950/40 border border-indigo-500/40 text-indigo-400 shadow-[0_0_20px_rgba(99,102,241,0.3)] group-hover:border-indigo-400 group-hover:shadow-[0_0_30px_rgba(99,102,241,0.5)] transition-all">
-                <GraduationCap className="h-6 w-6" />
-              </div>
-              <div className="flex flex-col">
-                <span className="text-xl sm:text-2xl font-black tracking-tight text-white font-display flex items-center gap-2">
-                  Scholar<span className="text-[var(--color-primary-bright)]">Nexus</span>
-                  <span className="hud-dot animate-pulse-signal" style={{ color: "var(--color-primary)" }} />
-                </span>
-                <span className="text-xs font-mono tracking-widest text-indigo-300/90 uppercase font-semibold">
-                  Scientific Literature Observatory
-                </span>
-              </div>
-            </button>
+    <div className="min-h-screen flex flex-col text-[var(--text-primary)] antialiased relative z-10">
+      {/* ============== EDITORIAL MASTHEAD ============== */}
+      <header className="sticky top-0 z-40 w-full border-b border-[var(--border-primary-dim)] bg-[var(--bg-obsidian)]/85 backdrop-blur-2xl shadow-[0_4px_40px_rgba(0,0,0,0.7)]">
+        {/* Top mono metadata strip */}
+        <div className="border-b border-[var(--border-dim)]">
+          <div className="mx-auto flex max-w-[1880px] w-full items-center justify-between px-5 sm:px-8 lg:px-12 xl:px-14 py-1.5">
+            <span className="font-mono text-[10px] tracking-[0.22em] uppercase text-[var(--text-muted)]">
+              KIVO <span className="text-[var(--color-primary)]">·</span> The Evidence Desk
+            </span>
+            <span className="hidden sm:flex items-center gap-4 font-mono text-[10px] tracking-[0.22em] uppercase text-[var(--text-muted)]">
+              <span>Vol. II</span>
+              <span className="text-[var(--text-faint)]">/</span>
+              <span className="text-[var(--color-green)] flex items-center gap-1.5">
+                <span className="hud-dot animate-pulse-signal" style={{ color: "var(--color-green)" }} />
+                Live Repositories
+              </span>
+              <span className="text-[var(--text-faint)]">/</span>
+              <span>EST. 2025</span>
+            </span>
+          </div>
+        </div>
 
-            {/* Main Navigation Tabs */}
-            <nav className="hidden md:flex items-center gap-2 pl-6 border-l border-indigo-500/20">
-              {navItems.map((item) => {
-                const Icon = item.icon;
-                const isActive = currentSection === item.id;
-                return (
-                  <button
-                    key={item.id}
-                    type="button"
-                    onClick={() => onNavigate(item.id)}
-                    className={`relative flex items-center gap-2.5 rounded-lg px-4 py-2.5 text-sm sm:text-base font-sans font-semibold transition-all ${
-                      isActive
-                        ? "bg-indigo-600/25 text-white border border-indigo-400/50 shadow-[0_0_20px_rgba(99,102,241,0.25)] font-bold"
-                        : "text-slate-300 hover:text-white hover:bg-white/[0.06]"
+        {/* Masthead row */}
+        <div className="mx-auto flex h-[68px] sm:h-[76px] max-w-[1880px] w-full items-center justify-between px-5 sm:px-8 lg:px-12 xl:px-14">
+          {/* Brand */}
+          <button
+            type="button"
+            onClick={() => onNavigate("discover")}
+            className="flex items-center gap-3.5 text-left focus:outline-none group"
+            aria-label="KIVO home"
+          >
+            <div className="relative flex h-11 w-11 sm:h-12 sm:w-12 items-center justify-center rounded-[10px] border border-[var(--border-primary-dim)] bg-[rgba(58, 157, 124,0.07)] text-[var(--color-primary-bright)] shadow-[0_0_22px_rgba(58, 157, 124,0.18)] group-hover:border-[var(--color-primary)] group-hover:shadow-[0_0_32px_rgba(58, 157, 124,0.36)] transition-all">
+              <Telescope className="h-[22px] w-[22px]" strokeWidth={1.6} />
+              <span className="absolute -right-1 -top-1 h-2 w-2 rounded-full bg-[var(--color-primary)] shadow-[0_0_8px_var(--color-primary)]" />
+            </div>
+            <div className="flex flex-col leading-none">
+              <span className="text-[26px] sm:text-[30px] font-bold tracking-tight text-[var(--text-primary)] font-display flex items-center gap-2" style={{ fontOpticalSizing: "auto" }}>
+                KIVO
+                <span className="hud-dot animate-pulse-signal" style={{ color: "var(--color-primary)" }} />
+              </span>
+              <span className="mt-1 text-[10px] font-mono tracking-[0.2em] text-[var(--color-primary-bright)]/80 uppercase font-semibold">
+                Literature Intelligence
+              </span>
+            </div>
+          </button>
+
+          {/* Desktop navigation */}
+          <nav className="hidden lg:flex items-center gap-1">
+            {NAV_ITEMS.map((item) => {
+              const Icon = item.icon;
+              const isActive = currentSection === item.id;
+              const badge = badges[item.id];
+              return (
+                <button
+                  key={item.id}
+                  type="button"
+                  onClick={() => onNavigate(item.id)}
+                  className={`group relative flex items-center gap-2.5 rounded-[8px] px-3.5 py-2.5 text-sm font-medium transition-all ${
+                    isActive
+                      ? "bg-[rgba(58, 157, 124,0.10)] text-[var(--text-primary)]"
+                      : "text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-white/[0.04]"
+                  }`}
+                >
+                  <span
+                    className={`font-mono text-[10px] tracking-wider ${
+                      isActive ? "text-[var(--color-primary)]" : "text-[var(--text-faint)] group-hover:text-[var(--text-muted)]"
                     }`}
                   >
-                    <Icon className={`h-4.5 w-4.5 ${isActive ? "text-[var(--color-primary-bright)]" : "text-slate-400"}`} />
-                    <span>{item.label}</span>
-                    {item.badge !== null && (
-                      <span
-                        className={`ml-1 flex h-5 min-w-[20px] items-center justify-center rounded-full px-1.5 text-xs font-bold ${
-                          isActive
-                            ? "bg-[var(--color-primary)] text-black"
-                            : "bg-white/[0.12] text-slate-200"
-                        }`}
-                      >
-                        {item.badge}
-                      </span>
-                    )}
-                  </button>
-                );
-              })}
-            </nav>
-          </div>
+                    {item.index}
+                  </span>
+                  <Icon
+                    className={`h-4 w-4 ${isActive ? "text-[var(--color-primary-bright)]" : ""}`}
+                    strokeWidth={1.7}
+                  />
+                  <span className={isActive ? "font-semibold" : ""}>{item.label}</span>
+                  {badge !== undefined && badge > 0 && (
+                    <span
+                      className={`ml-0.5 flex h-5 min-w-[20px] items-center justify-center rounded-full px-1.5 text-[11px] font-mono font-bold ${
+                        isActive
+                          ? "bg-[var(--color-primary)] text-[#06140e]"
+                          : "bg-white/[0.10] text-[var(--text-secondary)]"
+                      }`}
+                    >
+                      {badge}
+                    </span>
+                  )}
+                  {isActive && (
+                    <span className="absolute -bottom-[1px] left-3 right-3 h-[2px] rounded-full bg-gradient-to-r from-transparent via-[var(--color-primary)] to-transparent shadow-[0_0_8px_var(--color-primary)]" />
+                  )}
+                </button>
+              );
+            })}
+          </nav>
 
-          {/* Right Status Console & Actions */}
-          <div className="flex items-center gap-3 sm:gap-4">
-            {/* Real-time Storage HUD Badge */}
+          {/* Status + backup */}
+          <div className="flex items-center gap-2.5 sm:gap-3">
             <div
               className={`hud-badge ${
-                storageStatus === "synced"
-                  ? "green"
-                  : storageStatus === "local"
-                  ? "iris"
-                  : "iris"
-              } text-xs sm:text-sm px-4 py-2 font-mono font-medium`}
+                storageStatus === "synced" ? "green" : "brass"
+              } px-3 py-1.5`}
               title={
                 storageStatus === "synced"
-                  ? "PostgreSQL database fully synced"
+                  ? "Workspace synced"
                   : "Persistent browser storage engine active"
               }
             >
-              <span className="hud-dot animate-pulse-signal" />
+              <HardDrive className="h-3.5 w-3.5" />
               <span className="hidden sm:inline">
-                {storageStatus === "synced" ? "DATABASE // SYNCED" : "LOCAL ENGINE // ACTIVE"}
+                {storageStatus === "synced" ? "SYNCED" : "LOCAL ENGINE"}
               </span>
             </div>
 
-            {/* Quick Export Snapshot Button */}
             {onExportSnapshot && (
               <button
                 type="button"
                 onClick={onExportSnapshot}
-                className="hidden sm:inline-flex items-center gap-2 rounded-lg border border-indigo-500/30 bg-[var(--bg-surface)] px-3.5 py-2 text-xs sm:text-sm font-mono font-medium text-slate-200 hover:border-[var(--color-primary)] hover:text-white hover:bg-indigo-950/30 transition-all shadow-sm"
-                title="Backup research workspace state"
+                className="hidden sm:inline-flex items-center gap-2 rounded-[8px] border border-[var(--border-medium)] bg-[var(--bg-surface)] px-3.5 py-2 text-xs font-mono font-medium text-[var(--text-secondary)] hover:border-[var(--color-primary)] hover:text-[var(--text-primary)] hover:bg-[rgba(58, 157, 124,0.06)] transition-all"
+                title="Backup research workspace"
               >
                 <Download className="h-4 w-4 text-[var(--color-primary-bright)]" />
                 <span>BACKUP</span>
@@ -181,48 +190,70 @@ export function WorkspaceShell({
           </div>
         </div>
 
-        {/* Mobile Navigation Strip */}
-        <div className="flex md:hidden items-center justify-around border-t border-indigo-500/20 px-3 py-2 bg-[#050813]">
-          {navItems.map((item) => {
+        {/* Editorial rule */}
+        <div className="editorial-rule" />
+      </header>
+
+      {/* ============== MAIN STAGE ============== */}
+      <main className="flex-1 w-full max-w-[1880px] mx-auto px-5 sm:px-8 lg:px-12 xl:px-14 py-8 sm:py-10 pb-28 lg:pb-10">
+        {children}
+      </main>
+
+      {/* ============== FOOTER (sticky to bottom) ============== */}
+      <footer className="w-full border-t border-[var(--border-primary-dim)] bg-[var(--bg-obsidian)]/92 backdrop-blur-xl mt-auto pb-24 lg:pb-0">
+        <div className="mx-auto max-w-[1880px] px-5 sm:px-8 lg:px-12 xl:px-14 py-6">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <div className="flex items-center gap-3">
+              <span className="text-[var(--color-primary-bright)] font-bold font-display text-lg">KIVO</span>
+              <span className="font-mono text-[11px] tracking-wider text-[var(--text-muted)]">
+                {"//"} The Evidence Desk — local-first research synthesis
+              </span>
+            </div>
+            <div className="flex flex-wrap items-center gap-4 sm:gap-5 font-mono text-[11px] tracking-wider">
+              <span className="flex items-center gap-1.5 text-[var(--color-green)]">
+                <span className="hud-dot animate-pulse-signal" style={{ color: "var(--color-green)" }} />
+                3 Repositories Online
+              </span>
+              <span className="text-[var(--text-muted)]">Crossref · arXiv · Europe PMC</span>
+              <span className="text-[var(--text-faint)]">v2.0 — KIVO Edition</span>
+            </div>
+          </div>
+        </div>
+      </footer>
+
+      {/* ============== MOBILE BOTTOM NAV ============== */}
+      <nav className="lg:hidden fixed bottom-0 inset-x-0 z-50 border-t border-[var(--border-primary-dim)] bg-[var(--bg-obsidian)]/95 backdrop-blur-2xl">
+        <div className="grid grid-cols-6">
+          {NAV_ITEMS.map((item) => {
             const Icon = item.icon;
             const isActive = currentSection === item.id;
+            const badge = badges[item.id];
             return (
               <button
                 key={item.id}
                 type="button"
                 onClick={() => onNavigate(item.id)}
-                className={`flex flex-col items-center gap-1 p-2 rounded-lg text-xs font-mono ${
-                  isActive ? "text-[var(--color-primary-bright)] font-bold" : "text-slate-400"
+                className={`relative flex flex-col items-center justify-center gap-1 py-2.5 transition-colors ${
+                  isActive ? "text-[var(--color-primary-bright)]" : "text-[var(--text-muted)]"
                 }`}
               >
-                <Icon className="h-4.5 w-4.5" />
-                <span>{item.label}</span>
+                <span className="relative">
+                  <Icon className="h-[18px] w-[18px]" strokeWidth={1.7} />
+                  {badge !== undefined && badge > 0 && (
+                    <span className="absolute -right-2.5 -top-2 flex h-4 min-w-[16px] items-center justify-center rounded-full bg-[var(--color-primary)] px-1 text-[9px] font-mono font-bold text-[#06140e]">
+                      {badge}
+                    </span>
+                  )}
+                </span>
+                <span className={`text-[10px] font-mono ${isActive ? "font-bold" : ""}`}>{item.short}</span>
+                {isActive && (
+                  <span className="absolute top-0 left-1/2 -translate-x-1/2 h-[2px] w-8 rounded-full bg-[var(--color-primary)] shadow-[0_0_8px_var(--color-primary)]" />
+                )}
               </button>
             );
           })}
         </div>
-      </header>
-
-      {/* Main Workspace Stage */}
-      <main className="flex-1 w-full max-w-[1880px] mx-auto px-5 sm:px-8 lg:px-12 xl:px-14 py-8 sm:py-10">
-        {children}
-      </main>
-
-      {/* Footer Technical Metadata */}
-      <footer className="w-full border-t border-indigo-500/20 bg-[#050813]/90 py-6 sm:py-8 text-sm text-[var(--text-muted)] font-mono">
-        <div className="mx-auto flex max-w-[1880px] flex-wrap items-center justify-between gap-4 px-5 sm:px-8 lg:px-12 xl:px-14">
-          <div className="flex items-center gap-2 sm:gap-3">
-            <span className="text-[var(--color-primary-bright)] font-bold font-display text-base">SCHOLARNEXUS</span>
-            <span className="text-slate-400">{"//"} Academic Literature Observatory & Synthesis Workbench</span>
-          </div>
-          <div className="flex items-center gap-5">
-            <span className="flex items-center gap-1.5 text-[var(--color-green)] font-medium">
-              <Activity className="h-3.5 w-3.5" /> 9 Academic Repositories Online
-            </span>
-            <span className="text-slate-400">v2.0.0</span>
-          </div>
-        </div>
-      </footer>
+      </nav>
     </div>
   );
 }

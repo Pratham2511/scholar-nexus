@@ -33,7 +33,7 @@ interface CitationNode {
 }
 
 /**
- * ScholarNexus 3D Floating Scientific Manuscripts & Citation Graph Canvas
+ * KIVO Floating Scientific Manuscripts & Citation Graph Canvas
  * - Drifting research documents in zero-gravity with realistic perspective tilt
  * - Micro-details: document text skeleton, folded dog-ear corners, miniature charts
  * - Interactive cursor parallax: papers softly sway and part as the cursor approaches
@@ -80,12 +80,12 @@ export function ResearchBackground() {
     window.addEventListener("mousemove", handleMouseMove, { passive: true });
     document.documentElement.addEventListener("mouseleave", handleMouseLeave);
 
-    // Accent colors for document headers & citation nodes
+    // Accent colors for document headers & citation nodes — emerald & sage palette
     const accents = [
-      "129, 140, 248", // Royal Iris (#818cf8)
-      "167, 139, 250", // Electric Violet (#a78bfa)
-      "52, 211, 153",  // Mint Emerald (#34d399)
-      "226, 232, 240", // Crisp Platinum (#e2e8f0)
+      "58, 157, 124",   // Deep Jade (#3a9d7c) — primary
+      "92, 196, 160",   // Bright Jade (#5cc4a0)
+      "107, 168, 136",  // Sage (#6ba888) — secondary
+      "226, 232, 240", // Warm Platinum (#e2e8f0)
     ];
 
     // Initialize 3D Floating Scientific Papers
@@ -173,8 +173,8 @@ export function ResearchBackground() {
 
       // Translucent Sheet Gradient
       const sheetGrad = ctx.createLinearGradient(-halfW, -halfH, halfW, halfH);
-      sheetGrad.addColorStop(0, `rgba(18, 26, 48, ${0.45 * p.opacity})`);
-      sheetGrad.addColorStop(1, `rgba(11, 16, 30, ${0.65 * p.opacity})`);
+      sheetGrad.addColorStop(0, `rgba(16, 28, 22, ${0.45 * p.opacity})`);
+      sheetGrad.addColorStop(1, `rgba(9, 16, 12, ${0.65 * p.opacity})`);
       ctx.fillStyle = sheetGrad;
       ctx.fill();
 
@@ -182,7 +182,7 @@ export function ResearchBackground() {
       ctx.shadowColor = "transparent";
 
       // Paper Border Stroke
-      ctx.strokeStyle = `rgba(129, 140, 248, ${0.25 * p.opacity})`;
+      ctx.strokeStyle = `rgba(58, 157, 124, ${0.25 * p.opacity})`;
       ctx.lineWidth = 1;
       ctx.stroke();
 
@@ -194,7 +194,7 @@ export function ResearchBackground() {
       ctx.closePath();
       ctx.fillStyle = `rgba(${p.accentColor}, ${0.2 * p.opacity})`;
       ctx.fill();
-      ctx.strokeStyle = `rgba(167, 139, 250, ${0.4 * p.opacity})`;
+      ctx.strokeStyle = `rgba(107, 168, 136, ${0.4 * p.opacity})`;
       ctx.stroke();
 
       // Document Header Indicator (Title placeholder)
@@ -261,7 +261,7 @@ export function ResearchBackground() {
             ctx.beginPath();
             ctx.moveTo(papers[i].x, papers[i].y);
             ctx.lineTo(papers[j].x, papers[j].y);
-            ctx.strokeStyle = `rgba(129, 140, 248, ${linkAlpha})`;
+            ctx.strokeStyle = `rgba(58, 157, 124, ${linkAlpha})`;
             ctx.lineWidth = 0.8;
             ctx.stroke();
           }

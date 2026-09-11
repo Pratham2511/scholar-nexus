@@ -11,7 +11,7 @@ export interface WorkspaceRepository {
   save(state: Workspace): Promise<void>;
 }
 
-const DATABASE_NAME = "scholar-nexus-workspace";
+const DATABASE_NAME = "kivo-workspace";
 const DATABASE_VERSION = 1;
 const STORE_NAME = "research";
 const RECORD_KEY = "primary-workspace";
@@ -81,7 +81,7 @@ export class BrowserWorkspaceRepository implements WorkspaceRepository {
       };
       openRequest.onsuccess = () => resolve(openRequest.result);
       openRequest.onerror = () => reject(openRequest.error || new Error("Could not open browser storage."));
-      openRequest.onblocked = () => reject(new Error("Browser storage is blocked by another ScholarNexus tab."));
+      openRequest.onblocked = () => reject(new Error("Browser storage is blocked by another KIVO tab."));
     });
     return this.database;
   }

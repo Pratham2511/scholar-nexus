@@ -1,7 +1,7 @@
 import { emptyWorkspace, type Workspace } from "./schema";
 import { normalizeWorkspace } from "./repository";
 
-const STORAGE_KEY = "scholar_nexus_workspace_cache_v5";
+const STORAGE_KEY = "kivo_workspace_cache_v1";
 
 /**
  * Bulletproof Browser Cache & Local Storage Engine

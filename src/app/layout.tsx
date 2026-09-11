@@ -5,15 +5,15 @@ import { PageLoader } from '@/components/ui/page-loader';
 import { ResearchBackground } from '@/components/desk/research-background';
 
 export const metadata: Metadata = {
-  title: 'ScholarNexus — Literature Discovery & Systematic Synthesis',
+  title: 'KIVO — The Evidence Desk',
   description:
-    'Multi-repository scholarly research workbench with citation intelligence, evidence extraction, and systematic review tools.',
+    'A local-first research workbench for discovering scholarly records, tracing citations, capturing source-grounded evidence, and synthesising literature reviews.',
   icons: { icon: '/logo.svg' },
   openGraph: {
-    title: 'ScholarNexus — Literature Discovery & Systematic Synthesis',
+    title: 'KIVO — The Evidence Desk',
     description:
-      'Multi-repository scholarly research workbench with citation intelligence, evidence extraction, and systematic review tools.',
-    siteName: 'ScholarNexus',
+      'Discover scholarly records, trace citations, capture source-grounded evidence, and synthesise literature reviews. Local-first. No black boxes.',
+    siteName: 'KIVO',
     type: 'website',
   },
 };
@@ -25,7 +25,7 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" className="dark">
-      <body className="bg-obsidian text-slate-100 antialiased selection:bg-indigo-500/30 selection:text-indigo-100">
+      <body className="bg-obsidian text-[var(--text-primary)] antialiased selection:bg-[var(--color-primary)]/30">
         <ResearchBackground />
         <CustomCursor />
         <PageLoader />

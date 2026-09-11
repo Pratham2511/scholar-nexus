@@ -1,89 +1,33 @@
-import { db } from "@/lib/db";
-import { ensureLocalUser, getLocalUserId } from "@/lib/user";
-import { emptyWorkspace, workspaceSchema, type Workspace } from "./schema";
+import { emptyWorkspace, type Workspace } from "./schema";
+
+/**
+ * KIVO operates in a browser-first local mode.
+ *
+ * The researcher's working set (saved papers, projects, evidence, compare tray,
+ * search history, alerts, inbox) lives authoritatively in the browser via
+ * IndexedDB / localStorage (see storage-engine.ts and repository.ts).
+ *
+ * The server is intentionally a lightweight, database-free relay: it never
+ * overwrites the local copy with stale data and accepts writes as acknowledged
+ * no-ops. This keeps the application fully functional with zero infrastructure
+ * while preserving the optional-sync contract the client expects.
+ */
+
+const SERVER_REVISION = 1;
+
 export async function readWorkspace() {
-  const existing = await db.researchWorkspace.findUnique({
-    where: { id: getLocalUserId() },
-  });
-  if (existing)
-    return {
-      revision: existing.revision,
-      state: workspaceSchema.parse(JSON.parse(existing.data)),
-    };
-  await ensureLocalUser();
-  const state = emptyWorkspace();
-  const saved = await db.savedPaper.findMany({
-    where: { userId: getLocalUserId() },
-  });
-  state.papers = saved.map((p) =>
-    p.metadata
-      ? JSON.parse(p.metadata)
-      : {
-          id: p.paperId,
-          title: p.title,
-          authors: p.authors.split("|||").filter(Boolean),
-          abstract: p.abstract || "",
-          year: p.year,
-          doi: p.doi,
-          pdfLink: p.pdfLink,
-          citationCount: p.citationCount,
-          publisher: p.publisher,
-          sources: p.source ? [p.source] : [],
-          sourceUrls: p.doi
-            ? [{ source: "DOI", url: `https://doi.org/${p.doi}` }]
-            : [],
-          keywords: p.keywords?.split("|||").filter(Boolean) || [],
-          openAccess: p.openAccess,
-          paperType: null,
-          venue: p.publisher,
-        },
-  );
-  const collections = await db.collection.findMany({
-    where: { userId: getLocalUserId() },
-    include: { papers: true },
-  });
-  state.projects = collections.map((c) => ({
-    id: c.id,
-    name: c.name,
-    question: c.description || "",
-    criteria: "",
-    createdAt: c.createdAt.toISOString(),
-    members: c.papers.map((p) => ({
-      paperId: p.paperId,
-      status: "unread" as const,
-      decision: "unscreened" as const,
-      reason: "",
-      notes: p.notes || "",
-      tags: "",
-    })),
-  }));
-  const alerts = await db.searchAlert.findMany({
-    where: { userId: getLocalUserId() },
-  });
-  state.alerts = alerts.map((a) => ({
-    id: a.id,
-    query: a.query,
-    filters: JSON.parse(a.filters),
-    providers: ["Crossref", "arXiv", "Europe PMC"],
-    frequency: a.frequency === "daily" ? "daily" : "weekly",
-    lastRunAt: a.lastRunAt?.toISOString() || null,
-    seen: [],
-    createdAt: a.createdAt.toISOString(),
-  }));
-  const row = await db.researchWorkspace.upsert({
-    where: { id: getLocalUserId() },
-    create: { id: getLocalUserId(), data: JSON.stringify(state) },
-    update: {},
-  });
+  // Return an empty workspace; the client's local copy is authoritative and
+  // the merge logic in use-workspace.ts preserves the local set when it has
+  // equal or more records than the (empty) server snapshot.
   return {
-    revision: row.revision,
-    state: workspaceSchema.parse(JSON.parse(row.data)),
+    revision: SERVER_REVISION,
+    state: emptyWorkspace(),
   };
 }
-export async function writeWorkspace(state: Workspace, revision: number) {
-  const result = await db.researchWorkspace.updateMany({
-    where: { id: getLocalUserId(), revision },
-    data: { data: JSON.stringify(state), revision: { increment: 1 } },
-  });
-  return result.count === 1;
+
+export async function writeWorkspace(_state: Workspace, revision: number) {
+  // Acknowledge the write without persisting server-side. The browser is the
+  // source of truth; the revision is echoed back so the client stays in sync.
+  void revision;
+  return true;
 }

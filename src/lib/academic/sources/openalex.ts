@@ -95,7 +95,7 @@ export async function searchOpenAlex(
   const res = await providerFetch(url, {
     headers: {
       Accept: "application/json",
-      "User-Agent": "ScholarNexus/3.0",
+      "User-Agent": "KIVO/2.0 (mailto:research@kivo.local)",
     },
     signal,
   });

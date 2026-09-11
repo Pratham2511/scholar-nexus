@@ -47,10 +47,9 @@ export function Desk({ section }: DeskProps) {
   // Search state
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedProviders, setSelectedProviders] = useState<string[]>([
-    "arxiv",
-    "openalex",
-    "semantic-scholar",
-    "biorxiv",
+    "Crossref",
+    "arXiv",
+    "Europe PMC",
   ]);
   const [filters, setFilters] = useState<SearchFilters>({
     sort: "relevance",
@@ -100,7 +99,7 @@ export function Desk({ section }: DeskProps) {
           yearTo: filters.yearTo,
           openAccess: filters.openAccess,
           minCitations: filters.minCitations,
-          providers: selectedProviders,
+          sources: selectedProviders,
           sort: filters.sort || "relevance",
           deduplicate: true,
         };
@@ -402,7 +401,7 @@ export function Desk({ section }: DeskProps) {
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `scholar-nexus-backup-${new Date().toISOString().slice(0, 10)}.json`;
+    a.download = `kivo-backup-${new Date().toISOString().slice(0, 10)}.json`;
     a.click();
     URL.revokeObjectURL(url);
   }, [state]);
@@ -477,14 +476,14 @@ export function Desk({ section }: DeskProps) {
           />
         ) : (
           <div className="tech-card bracketed p-16 text-center max-w-xl mx-auto space-y-5">
-            <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-xl bg-indigo-950/40 border border-indigo-500/40 text-indigo-400 shadow-[0_0_25px_rgba(99,102,241,0.3)]">
+            <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-xl bg-[rgba(58, 157, 124,0.08)] border border-[var(--border-primary-dim)] text-[var(--color-primary-bright)] shadow-[0_0_25px_rgba(58, 157, 124,0.22)]">
               <BookOpen className="h-8 w-8" />
             </div>
             <div className="space-y-2">
-              <h3 className="text-2xl font-bold text-white font-display">
+              <h3 className="text-2xl font-bold text-[var(--text-primary)] font-display">
                 No Paper Selected in Reader
               </h3>
-              <p className="text-sm sm:text-base text-slate-300 leading-relaxed">
+              <p className="text-sm sm:text-base text-[var(--text-secondary)] leading-relaxed">
                 Select any scientific paper from literature discovery or your library to read the abstract, trace citations, and capture evidence.
               </p>
             </div>

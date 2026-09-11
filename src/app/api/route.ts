@@ -9,7 +9,7 @@ export const runtime = "nodejs";
 export async function GET() {
   return NextResponse.json({
     ok: true,
-    service: "scholar-nexus-api",
+    service: "kivo-api",
     time: new Date().toISOString(),
   });
 }

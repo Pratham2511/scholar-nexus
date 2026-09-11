@@ -1,34 +1,24 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useRef, useState } from "react";
 import {
   ArrowLeft,
-  FileText,
+  ArrowUpRight,
   Bookmark,
   Scale,
+  FileText,
   ExternalLink,
   Quote,
-  Sparkles,
-  Network,
-  CheckCircle2,
   Trash2,
+  CheckCircle2,
+  AlertTriangle,
   BookOpen,
-  Send,
-  RefreshCw,
+  PlusCircle,
 } from "lucide-react";
-import type { Workspace, Evidence } from "@/lib/workspace/schema";
+import type { Evidence } from "@/lib/workspace/schema";
 import { fields } from "@/lib/workspace/schema";
 import { resolvePaperAccess } from "./source-resolver";
 import type { Paper } from "./paper-card";
-
-interface CitationNeighbor {
-  id: string;
-  title: string;
-  year: number | null;
-  authors: string[];
-  citationCount: number | null;
-  direction: "citing" | "cited";
-}
 
 interface ReaderViewProps {
   paper: Paper;
@@ -47,6 +37,8 @@ interface ReaderViewProps {
   onDeleteEvidence: (evidenceId: string) => Promise<boolean>;
 }
 
+type CaptureMessage = { type: "success" | "error" | "info"; text: string };
+
 export function ReaderView({
   paper,
   onBack,
@@ -61,600 +53,504 @@ export function ReaderView({
   const access = resolvePaperAccess(paper);
   const paperEvidence = workspaceEvidence.filter((e) => e.paperId === paper.id);
 
-  // Evidence capture state
   const [selectedField, setSelectedField] = useState<Evidence["field"]>("Findings");
   const [evidenceKind, setEvidenceKind] = useState<Evidence["kind"]>("author passage");
-  const [quoteInput, setQuoteInput] = useState("");
-  const [noteInput, setNoteInput] = useState("");
+  const [textInput, setTextInput] = useState("");
   const [isCapturing, setIsCapturing] = useState(false);
-  const [captureMessage, setCaptureMessage] = useState("");
+  const [captureMessage, setCaptureMessage] = useState<CaptureMessage | null>(null);
 
-  // AI Assistant state
-  const [aiQuestion, setAiQuestion] = useState("");
-  const [isAskingAi, setIsAskingAi] = useState(false);
-  const [aiAnswer, setAiAnswer] = useState<{
-    answer: string;
-    status: string;
-    passages?: { page: number; text: string }[];
-  } | null>(null);
+  const abstractRef = useRef<HTMLDivElement>(null);
 
-  // Citation Explorer state
-  const [activeTab, setActiveTab] = useState<"evidence" | "ai" | "citations">("evidence");
-  const [citationDirection, setCitationDirection] = useState<"refs" | "cites">("refs");
-  const [citationsList, setCitationsList] = useState<CitationNeighbor[] | null>(null);
-  const [isLoadingCitations, setIsLoadingCitations] = useState(false);
-
-  // Text selection handler
-  const textContainerRef = useRef<HTMLDivElement>(null);
+  const trimmedInput = textInput.trim();
+  const isVerbatimExcerpt =
+    evidenceKind === "author passage"
+      ? trimmedInput.length > 0 && paper.abstract.includes(trimmedInput)
+      : trimmedInput.length > 0;
 
   const handleTextSelection = () => {
     const selection = window.getSelection();
-    if (selection && selection.toString().trim().length > 5) {
-      const selected = selection.toString().trim();
-      setQuoteInput(selected);
+    if (!selection) return;
+    const selected = selection.toString().trim();
+    if (selected.length < 5) return;
+    // Only capture selections that originated inside the abstract panel.
+    if (abstractRef.current && abstractRef.current.contains(selection.anchorNode)) {
+      setTextInput(selected);
       setEvidenceKind("author passage");
-      setCaptureMessage("Passage captured to quote input.");
+      setCaptureMessage({
+        type: "info",
+        text: "Passage captured to the quote input. Verify and capture.",
+      });
     }
   };
 
   const handleSaveEvidence = async () => {
-    if (evidenceKind === "author passage" && !quoteInput.trim()) {
-      setCaptureMessage("Select or input an author passage first.");
+    setCaptureMessage(null);
+
+    if (!trimmedInput) {
+      setCaptureMessage({
+        type: "error",
+        text:
+          evidenceKind === "author passage"
+            ? "Enter or highlight a verbatim passage from the abstract."
+            : "Write a synthesis note before saving.",
+      });
       return;
     }
-    if (evidenceKind === "researcher note" && !noteInput.trim()) {
-      setCaptureMessage("Write a synthesis note first.");
+
+    if (evidenceKind === "author passage" && !paper.abstract.includes(trimmedInput)) {
+      setCaptureMessage({
+        type: "error",
+        text: "Author passages must be verbatim excerpts from the abstract. Save paraphrases as a researcher note instead.",
+      });
       return;
     }
 
     setIsCapturing(true);
-    setCaptureMessage("");
     try {
       const success = await onCaptureEvidence({
         field: selectedField,
         kind: evidenceKind,
-        statement: evidenceKind === "author passage" ? quoteInput.trim() : noteInput.trim(),
-        quote: evidenceKind === "author passage" ? quoteInput.trim() : "",
+        statement: trimmedInput,
+        quote: evidenceKind === "author passage" ? trimmedInput : "",
       });
 
       if (success) {
-        setQuoteInput("");
-        setNoteInput("");
-        setCaptureMessage("Evidence statement successfully saved!");
-        setTimeout(() => setCaptureMessage(""), 3000);
+        setTextInput("");
+        setCaptureMessage({ type: "success", text: "Evidence captured to the workspace." });
+        setTimeout(() => setCaptureMessage(null), 3500);
+      } else {
+        setCaptureMessage({
+          type: "error",
+          text: "Could not save evidence. Try again in a moment.",
+        });
       }
     } finally {
       setIsCapturing(false);
     }
   };
 
-  const handleAskAi = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!aiQuestion.trim()) return;
-
-    setIsAskingAi(true);
-    setAiAnswer(null);
-    try {
-      const res = await fetch("/api/ai/ask", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          paperId: paper.id,
-          question: aiQuestion.trim(),
-          context: paper.abstract,
-        }),
-      });
-      const data = await res.json();
-      if (res.ok) {
-        setAiAnswer(data);
-      } else {
-        setAiAnswer({ answer: data.error || "Unable to resolve query.", status: "error" });
-      }
-    } catch {
-      setAiAnswer({ answer: "Connection failure while querying AI endpoint.", status: "error" });
-    } finally {
-      setIsAskingAi(false);
-    }
+  const handleDelete = async (evidenceId: string) => {
+    await onDeleteEvidence(evidenceId);
   };
 
-  // Load citations on demand
-  useEffect(() => {
-    if (activeTab !== "citations") return;
-    if (citationsList !== null) return;
+  const authorsDisplay =
+    paper.authors.length > 0
+      ? paper.authors.slice(0, 6).join(", ") +
+        (paper.authors.length > 6 ? ` et al. (+${paper.authors.length - 6})` : "")
+      : "Unknown authors";
 
-    let mounted = true;
-    setIsLoadingCitations(true);
-
-    const targetUrl =
-      citationDirection === "refs"
-        ? `/api/citations/references?paperId=${encodeURIComponent(paper.id)}`
-        : `/api/citations/citations?paperId=${encodeURIComponent(paper.id)}`;
-
-    fetch(targetUrl)
-      .then((res) => (res.ok ? res.json() : Promise.reject(new Error("Citation fetch failed"))))
-      .then((data) => {
-        if (!mounted) return;
-        const list = Array.isArray(data) ? data : data.citations || data.references || [];
-        setCitationsList(list);
-      })
-      .catch(() => {
-        if (!mounted) return;
-        setCitationsList([]);
-      })
-      .finally(() => {
-        if (mounted) setIsLoadingCitations(false);
-      });
-
-    return () => {
-      mounted = false;
-    };
-  }, [activeTab, citationDirection, paper.id, citationsList]);
+  const accessVariantClass =
+    access.accessBadge.variant === "emerald" ? "green" : "brass";
 
   return (
-    <div className="space-y-6">
-      {/* Top Navigation & Action Command Header */}
-      <div className="tech-card bracketed p-4 flex flex-wrap items-center justify-between gap-4">
-        <div className="flex items-center gap-3">
-          <button
-            type="button"
-            onClick={onBack}
-            className="btn btn-secondary h-10 px-4 text-xs sm:text-sm font-mono font-semibold"
+    <div className="space-y-7">
+      {/* ====================== MASTHEAD ====================== */}
+      <header className="space-y-4 animate-fade-up">
+        <div className="flex flex-wrap items-center gap-3">
+          <span className="section-index"><span className="num">02</span> / Reader</span>
+          <span className="h-px flex-1 bg-[var(--border-dim)] min-w-[40px]" />
+          <div className="flex flex-wrap items-center gap-2">
+            <button
+              type="button"
+              onClick={onBack}
+              className="btn btn-secondary h-9 px-3.5 text-xs font-mono font-bold uppercase tracking-wider"
+            >
+              <ArrowLeft className="w-4 h-4" />
+              <span>Back</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => onToggleSave(paper)}
+              className={`btn h-9 px-3.5 text-xs font-mono font-bold uppercase tracking-wider ${
+                isSaved ? "btn-primary" : "btn-secondary"
+              }`}
+              title={isSaved ? "Remove from library" : "Save to library"}
+            >
+              <Bookmark className={`w-4 h-4 ${isSaved ? "fill-current" : ""}`} />
+              <span>{isSaved ? "Saved" : "Save"}</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => onToggleCompare(paper)}
+              className={`btn h-9 px-3.5 text-xs font-mono font-bold uppercase tracking-wider ${
+                isCompared ? "btn-coral" : "btn-secondary"
+              }`}
+              title="Compare side-by-side"
+            >
+              <Scale className="w-4 h-4" />
+              <span>{isCompared ? "Comparing" : "Compare"}</span>
+            </button>
+          </div>
+        </div>
+
+        <h1
+          className="text-3xl sm:text-4xl lg:text-[2.6rem] font-bold font-display leading-[1.1] text-[var(--text-primary)] pt-1"
+          style={{ fontOpticalSizing: "auto" }}
+        >
+          {paper.title}
+        </h1>
+
+        <p className="text-base sm:text-lg text-[var(--text-secondary)] font-serif-italic">
+          {authorsDisplay}
+        </p>
+
+        {/* Mono metadata strip */}
+        <div className="flex flex-wrap items-center gap-2 text-[11px] font-mono">
+          {paper.year && (
+            <span className="rounded-md bg-white/[0.07] border border-[var(--border-dim)] px-2 py-0.5 text-[var(--text-primary)] font-bold tracking-wide">
+              {paper.year}
+            </span>
+          )}
+          {paper.venue && (
+            <span
+              className="max-w-[320px] truncate rounded-md bg-white/[0.03] border border-[var(--border-dim)] px-2 py-0.5 text-[var(--text-secondary)] font-medium"
+              title={paper.venue}
+            >
+              {paper.venue}
+            </span>
+          )}
+          {paper.citationCount !== null && (
+            <span className="hud-badge brass py-1 px-2.5 text-[10px]">
+              <span className="hud-dot" />
+              <span>
+                {paper.citationCount} {paper.citationCount === 1 ? "CITE" : "CITES"}
+              </span>
+            </span>
+          )}
+          <span
+            className={`hud-badge ${accessVariantClass} py-1 px-2.5 text-[10px]`}
+            title={access.accessBadge.tooltip}
           >
-            <ArrowLeft className="w-4 h-4" />
-            <span>BACK</span>
-          </button>
-          <span className="hidden lg:inline-block max-w-lg truncate text-sm font-mono text-slate-400">
-            {"//"} {paper.title}
+            {access.hasDirectPdf && <span className="hud-dot animate-pulse-signal" />}
+            <span>{access.accessBadge.label}</span>
           </span>
+          {paper.doi && (
+            <span className="font-mono text-[11px] text-[var(--text-muted)] truncate max-w-[280px] flex items-center gap-1.5">
+              <Quote className="w-3 h-3 text-[var(--color-primary)]/60" />
+              DOI: {paper.doi}
+            </span>
+          )}
         </div>
 
-        {/* Source-Aware Action Buttons */}
-        <div className="flex flex-wrap items-center gap-2.5 font-mono text-xs sm:text-sm">
-          {access.primaryAction && (
-            <a
-              href={access.primaryAction.url}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="btn btn-emerald h-10 px-4 text-xs sm:text-sm font-bold"
-            >
-              <ExternalLink className="w-4 h-4" />
-              <span>{access.primaryAction.isDirectPdf ? "VIEW / DOWNLOAD PDF" : access.primaryAction.label}</span>
-            </a>
-          )}
+        <div className="editorial-rule" />
+      </header>
 
-          {access.doiUrl && (
-            <a
-              href={access.doiUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="btn btn-secondary h-10 px-4 text-xs sm:text-sm font-semibold"
-            >
-              <ExternalLink className="w-3.5 h-3.5 text-[var(--color-primary-bright)]" />
-              <span>DOI SOURCE</span>
-            </a>
-          )}
-
-          <button
-            type="button"
-            onClick={() => onToggleCompare(paper)}
-            className={`rounded-lg border px-3 py-1.5 text-xs sm:text-sm font-semibold transition-all ${
-              isCompared
-                ? "border-[var(--color-purple)] bg-[var(--color-purple)]/20 text-white shadow-[0_0_12px_rgba(167,139,250,0.3)]"
-                : "border-indigo-500/20 text-slate-300 hover:border-[var(--color-purple)] hover:text-white"
-            }`}
-          >
-            <Scale className="w-4 h-4 inline mr-1.5" />
-            <span>{isCompared ? "COMPARING" : "COMPARE"}</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => onToggleSave(paper)}
-            className={`rounded-lg border px-3 py-1.5 text-xs sm:text-sm font-semibold transition-all ${
-              isSaved
-                ? "border-[var(--color-primary)] bg-[var(--color-primary)]/20 text-white shadow-[0_0_12px_rgba(99,102,241,0.3)]"
-                : "border-indigo-500/20 text-slate-300 hover:border-[var(--color-primary)] hover:text-white"
-            }`}
-          >
-            <Bookmark className={`w-4 h-4 inline mr-1.5 ${isSaved ? "fill-current text-indigo-400" : ""}`} />
-            <span>{isSaved ? "SAVED" : "SAVE"}</span>
-          </button>
-        </div>
-      </div>
-
-      {/* Two-Column Research Layout */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-        {/* Left Column: Metadata & Evidence Studio */}
-        <div className="lg:col-span-5 space-y-5">
-          {/* Paper Metadata Card */}
-          <div className="tech-card bracketed p-6 space-y-3.5">
-            <h2 className="text-xl sm:text-2xl font-bold text-white font-display leading-snug">
-              {paper.title}
-            </h2>
-
-            <div className="flex flex-wrap items-center gap-2 text-xs font-mono">
-              {paper.year && (
-                <span className="rounded-md bg-white/[0.08] border border-indigo-500/20 px-2.5 py-1 text-slate-200 font-bold">
-                  {paper.year}
-                </span>
-              )}
-              {paper.venue && (
-                <span className="rounded-md bg-white/[0.04] border border-indigo-500/20 px-2.5 py-1 text-slate-300 font-medium">
-                  {paper.venue}
-                </span>
-              )}
-              {paper.citationCount !== null && (
-                <span className="hud-badge iris py-1 px-2.5 text-xs font-semibold">
-                  <span className="hud-dot" />
-                  <span>{paper.citationCount} CITES</span>
-                </span>
-              )}
-              <span className="hud-badge green py-1 px-2.5 text-xs font-semibold">
-                {access.accessBadge.label}
+      {/* ====================== TWO-COLUMN BODY ====================== */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-7 items-start">
+        {/* ============ LEFT: abstract + access + evidence list ============ */}
+        <div className="lg:col-span-7 space-y-6">
+          {/* Abstract panel */}
+          <section className="tech-card bracketed p-6 sm:p-7 space-y-4">
+            <div className="flex items-center gap-2">
+              <BookOpen className="w-4 h-4 text-[var(--color-primary)]" />
+              <h2 className="section-index">
+                <span className="num">02.1</span> Abstract
+              </h2>
+              <span className="h-px flex-1 bg-[var(--border-dim)]" />
+              <span className="font-mono text-[10px] text-[var(--text-muted)] uppercase tracking-wider hidden sm:inline">
+                Highlight to capture
               </span>
             </div>
 
-            <div className="text-sm text-slate-300 pt-1 font-sans">
-              <span className="font-mono text-slate-400 uppercase text-xs mr-1.5 font-bold">AUTHORS:</span>
-              {paper.authors.join(", ") || "Unknown"}
+            {paper.abstract ? (
+              <div
+                ref={abstractRef}
+                onMouseUp={handleTextSelection}
+                className="text-[15px] sm:text-base text-[var(--text-secondary)] leading-[1.78] font-sans whitespace-pre-line select-text"
+              >
+                {paper.abstract}
+              </div>
+            ) : (
+              <div className="rounded border border-dashed border-[var(--border-medium)] p-8 text-center text-xs text-[var(--text-muted)] font-mono uppercase tracking-wider">
+                Abstract not provided in the index record. Open the original paper via the access block below.
+              </div>
+            )}
+          </section>
+
+          {/* Access & provenance */}
+          <section className="tech-card p-5 sm:p-6 space-y-3">
+            <div className="flex items-center gap-2">
+              <FileText className="w-4 h-4 text-[var(--color-primary)]" />
+              <h2 className="section-index">
+                <span className="num">02.2</span> Access &amp; Provenance
+              </h2>
+              <span className="h-px flex-1 bg-[var(--border-dim)]" />
             </div>
 
-            {paper.doi && (
-              <div className="text-xs text-slate-400 font-mono">
-                DOI: {paper.doi}
-              </div>
-            )}
-          </div>
-
-          {/* Evidence Studio & Knowledge Tabs */}
-          <div className="tech-card bracketed p-0 overflow-hidden">
-            {/* Tab Headers */}
-            <div className="flex border-b border-[var(--border-dim)] bg-[var(--bg-obsidian)] font-mono text-xs">
-              <button
-                type="button"
-                onClick={() => setActiveTab("evidence")}
-                className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 border-b-2 transition-all ${
-                  activeTab === "evidence"
-                    ? "border-[var(--color-primary)] text-[var(--color-primary-bright)] bg-white/[0.03] font-bold"
-                    : "border-transparent text-[var(--text-muted)] hover:text-white"
-                }`}
-              >
-                <Quote className="w-3.5 h-3.5" />
-                <span>EVIDENCE ({paperEvidence.length})</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => setActiveTab("ai")}
-                className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 border-b-2 transition-all ${
-                  activeTab === "ai"
-                    ? "border-[var(--color-primary)] text-[var(--color-primary-bright)] bg-white/[0.03] font-bold"
-                    : "border-transparent text-[var(--text-muted)] hover:text-white"
-                }`}
-              >
-                <Sparkles className="w-3.5 h-3.5" />
-                <span>ASK AI</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => setActiveTab("citations")}
-                className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 border-b-2 transition-all ${
-                  activeTab === "citations"
-                    ? "border-[var(--color-primary)] text-[var(--color-primary-bright)] bg-white/[0.03] font-bold"
-                    : "border-transparent text-[var(--text-muted)] hover:text-white"
-                }`}
-              >
-                <Network className="w-3.5 h-3.5" />
-                <span>CITATIONS</span>
-              </button>
-            </div>
-
-            {/* Tab 1: Evidence Capture & Catalog */}
-            {activeTab === "evidence" && (
-              <div className="p-4 space-y-4 font-mono text-xs">
-                <div className="rounded border border-[var(--border-dim)] bg-[var(--bg-obsidian)]/50 p-3.5 space-y-3">
-                  <div className="flex items-center justify-between">
-                    <span className="font-bold text-white text-[11px] uppercase">
-                      CAPTURE EVIDENCE CLAIM
-                    </span>
-                    <div className="flex items-center gap-1 text-[10px]">
-                      <button
-                        type="button"
-                        onClick={() => setEvidenceKind("author passage")}
-                        className={`px-2 py-0.5 rounded ${
-                          evidenceKind === "author passage"
-                            ? "bg-[var(--color-primary)] text-[var(--bg-obsidian)] font-bold"
-                            : "bg-white/[0.06] text-slate-400"
-                        }`}
-                      >
-                        PASSAGE
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setEvidenceKind("researcher note")}
-                        className={`px-2 py-0.5 rounded ${
-                          evidenceKind === "researcher note"
-                            ? "bg-[var(--color-primary)] text-[var(--bg-obsidian)] font-bold"
-                            : "bg-white/[0.06] text-slate-400"
-                        }`}
-                      >
-                        NOTE
-                      </button>
-                    </div>
-                  </div>
-
-                  <div>
-                    <label className="text-[10px] text-[var(--text-muted)] uppercase block mb-1">
-                      Classification Field:
-                    </label>
-                    <select
-                      value={selectedField}
-                      onChange={(e) => setSelectedField(e.target.value as Evidence["field"])}
-                      className="h-8 w-full rounded border border-[var(--border-medium)] bg-[var(--bg-obsidian)] px-2 text-xs text-white focus:border-[var(--color-primary)] focus:outline-none"
-                    >
-                      {fields.map((f) => (
-                        <option key={f} value={f}>
-                          {f}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-
-                  {evidenceKind === "author passage" ? (
-                    <div>
-                      <label className="text-[10px] text-[var(--text-muted)] uppercase block mb-1">
-                        Verbatim Quote (Highlight text on right):
-                      </label>
-                      <textarea
-                        rows={3}
-                        value={quoteInput}
-                        onChange={(e) => setQuoteInput(e.target.value)}
-                        placeholder="Highlight any passage in the abstract to capture it automatically..."
-                        className="w-full rounded border border-[var(--border-medium)] bg-[var(--bg-obsidian)] p-2 text-xs text-slate-200 placeholder:text-[var(--text-muted)] focus:border-[var(--color-primary)] focus:outline-none font-sans"
-                      />
-                    </div>
-                  ) : (
-                    <div>
-                      <label className="text-[10px] text-[var(--text-muted)] uppercase block mb-1">
-                        Synthesis Note / Finding:
-                      </label>
-                      <textarea
-                        rows={3}
-                        value={noteInput}
-                        onChange={(e) => setNoteInput(e.target.value)}
-                        placeholder="Write evaluation or empirical finding..."
-                        className="w-full rounded border border-[var(--border-medium)] bg-[var(--bg-obsidian)] p-2 text-xs text-slate-200 placeholder:text-[var(--text-muted)] focus:border-[var(--color-primary)] focus:outline-none font-sans"
-                      />
-                    </div>
-                  )}
-
-                  {captureMessage && (
-                    <p className="text-xs text-[var(--color-primary-bright)]">
-                      {captureMessage}
-                    </p>
-                  )}
-
-                  <button
-                    type="button"
-                    disabled={isCapturing}
-                    onClick={handleSaveEvidence}
-                    className="btn btn-primary w-full h-8 text-xs font-mono uppercase"
-                  >
-                    <CheckCircle2 className="w-3.5 h-3.5" />
-                    <span>SAVE EVIDENCE RECORD</span>
-                  </button>
-                </div>
-
-                {/* Catalog of Saved Evidence */}
-                <div className="space-y-2">
-                  <h4 className="text-[var(--text-muted)] uppercase font-bold text-[10px]">
-                    Saved Findings ({paperEvidence.length})
-                  </h4>
-                  {paperEvidence.length === 0 ? (
-                    <p className="text-[var(--text-muted)] text-xs italic">
-                      No evidence recorded yet. Highlight text in the abstract to capture passages.
-                    </p>
-                  ) : (
-                    paperEvidence.map((ev) => (
-                      <div
-                        key={ev.id}
-                        className="rounded border border-[var(--border-dim)] bg-white/[0.02] p-3 space-y-1.5"
-                      >
-                        <div className="flex items-center justify-between">
-                          <span className="hud-badge iris py-0.5 px-2 text-xs font-semibold">
-                            {ev.field}
-                          </span>
-                          <button
-                            type="button"
-                            onClick={() => onDeleteEvidence(ev.id)}
-                            className="text-slate-400 hover:text-rose-400 p-1 transition-colors"
-                            title="Delete evidence"
-                          >
-                            <Trash2 className="w-3.5 h-3.5" />
-                          </button>
-                        </div>
-                        <p className="text-slate-200 italic leading-relaxed font-sans text-sm">
-                          &ldquo;{ev.statement}&rdquo;
-                        </p>
-                        <span className="block text-[10px] text-[var(--text-muted)] font-mono">
-                          {ev.kind} · {new Date(ev.createdAt).toLocaleDateString()}
-                        </span>
-                      </div>
-                    ))
-                  )}
-                </div>
-              </div>
-            )}
-
-            {/* Tab 2: AI Query */}
-            {activeTab === "ai" && (
-              <div className="p-4 space-y-3 font-mono text-xs">
-                <form onSubmit={handleAskAi} className="space-y-2">
-                  <label className="text-[var(--text-muted)] uppercase text-[10px] block">
-                    Inquire paper abstract:
-                  </label>
-                  <div className="flex gap-2">
-                    <input
-                      type="text"
-                      value={aiQuestion}
-                      onChange={(e) => setAiQuestion(e.target.value)}
-                      placeholder="e.g. What dataset was evaluated?"
-                      className="h-8 flex-1 rounded border border-[var(--border-medium)] bg-[var(--bg-obsidian)] px-2.5 text-xs text-white focus:border-[var(--color-primary)] focus:outline-none font-sans"
-                    />
-                    <button
-                      type="submit"
-                      disabled={isAskingAi || !aiQuestion.trim()}
-                      className="btn btn-primary h-8 px-3 text-xs"
-                    >
-                      {isAskingAi ? (
-                        <RefreshCw className="w-3.5 h-3.5 animate-spin" />
-                      ) : (
-                        <Send className="w-3.5 h-3.5" />
-                      )}
-                    </button>
-                  </div>
-                </form>
-
-                {aiAnswer && (
-                  <div className="rounded border border-[var(--border-primary-dim)] bg-[var(--bg-surface-elevated)] p-3 space-y-1">
-                    <span className="font-bold text-[var(--color-primary-bright)] block text-xs">
-                      AI SYNTHESIS:
-                    </span>
-                    <p className="text-slate-200 leading-relaxed font-sans text-xs">
-                      {aiAnswer.answer}
-                    </p>
-                  </div>
-                )}
-              </div>
-            )}
-
-            {/* Tab 3: Citation Graph */}
-            {activeTab === "citations" && (
-              <div className="p-4 space-y-3 font-mono text-xs">
-                <div className="flex items-center gap-2">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setCitationDirection("refs");
-                      setCitationsList(null);
-                    }}
-                    className={`px-2.5 py-1 rounded text-xs transition-all ${
-                      citationDirection === "refs"
-                        ? "bg-[var(--color-primary)] text-[var(--bg-obsidian)] font-bold"
-                        : "bg-white/[0.04] text-slate-400"
-                    }`}
-                  >
-                    REFERENCES CITED
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setCitationDirection("cites");
-                      setCitationsList(null);
-                    }}
-                    className={`px-2.5 py-1 rounded text-xs transition-all ${
-                      citationDirection === "cites"
-                        ? "bg-[var(--color-primary)] text-[var(--bg-obsidian)] font-bold"
-                        : "bg-white/[0.04] text-slate-400"
-                    }`}
-                  >
-                    CITING PAPERS
-                  </button>
-                </div>
-
-                {isLoadingCitations && (
-                  <div className="flex items-center justify-center py-6 text-[var(--text-muted)]">
-                    <RefreshCw className="w-4 h-4 animate-spin mr-2 text-[var(--color-primary-bright)]" />
-                    Tracing citation graph...
-                  </div>
-                )}
-
-                {!isLoadingCitations && citationsList && citationsList.length > 0 && (
-                  <div className="space-y-2 max-h-96 overflow-y-auto pr-1">
-                    {citationsList.map((neighbor, i) => (
-                      <div
-                        key={i}
-                        className="rounded border border-[var(--border-dim)] bg-white/[0.02] p-2.5"
-                      >
-                        <h5 className="font-bold text-white text-xs font-display">
-                          {neighbor.title}
-                        </h5>
-                        <p className="text-[11px] text-[var(--text-muted)] pt-0.5 font-sans">
-                          {neighbor.authors?.slice(0, 2).join(", ")} {neighbor.year ? `(${neighbor.year})` : ""}
-                          {neighbor.citationCount !== null ? ` · ${neighbor.citationCount} cites` : ""}
-                        </p>
-                      </div>
-                    ))}
-                  </div>
-                )}
-
-                {!isLoadingCitations && citationsList && citationsList.length === 0 && (
-                  <p className="text-[var(--text-muted)] py-6 text-center italic">
-                    No citation relationships indexed for this paper.
-                  </p>
-                )}
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* Right Column: Reading Canvas */}
-        <div className="lg:col-span-7">
-          <div className="tech-card bracketed p-6 sm:p-8 space-y-6">
-            <div className="flex items-center justify-between border-b border-[var(--border-dim)] pb-4">
-              <div className="flex items-center gap-2">
-                <BookOpen className="w-4 h-4 text-[var(--color-primary-bright)]" />
-                <h3 className="text-base font-bold text-white font-display">
-                  Document Abstract & Evidence Passages
-                </h3>
-              </div>
-              <span className="text-[11px] font-mono text-[var(--text-muted)]">
-                HIGHLIGHT TEXT TO CAPTURE
+            <div className="flex flex-wrap items-center gap-2.5">
+              <span className={`hud-badge ${access.hasDirectPdf ? "green" : "brass"} py-1.5 px-3`}>
+                {access.hasDirectPdf && <span className="hud-dot animate-pulse-signal" />}
+                <span>{access.accessBadge.label}</span>
               </span>
-            </div>
 
-            {/* Reading Content Canvas with Selection Listener */}
-            <div
-              ref={textContainerRef}
-              onMouseUp={handleTextSelection}
-              className="text-sm sm:text-base text-slate-200 leading-relaxed font-sans select-text space-y-4"
-            >
-              {paper.abstract ? (
-                <div className="whitespace-pre-line leading-relaxed">
-                  {paper.abstract}
-                </div>
-              ) : (
-                <div className="rounded border border-dashed border-[var(--border-medium)] p-12 text-center text-xs text-[var(--text-muted)] font-mono">
-                  ABSTRACT NOT PROVIDED IN INDEX RECORD. OPEN ORIGINAL PAPER AT SOURCE USING THE BUTTONS ABOVE.
-                </div>
-              )}
-            </div>
-
-            {/* Source Access Banner */}
-            <div className="tech-card bracketed p-4 flex flex-wrap items-center justify-between gap-3 text-xs font-mono">
-              <div>
-                <span className="font-bold text-white block">
-                  ORIGINAL PUBLICATION ACCESS
-                </span>
-                <span className="text-[var(--text-muted)] text-[11px] font-sans">
-                  {access.hasDirectPdf
-                    ? "Direct verified PDF is immediately accessible."
-                    : "Access publisher landing page via official DOI resolver."}
-                </span>
-              </div>
               {access.primaryAction && (
                 <a
                   href={access.primaryAction.url}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="btn btn-primary h-8 px-3 text-xs"
+                  className={`btn h-9 px-4 text-xs font-mono font-bold uppercase tracking-wider ${
+                    access.hasDirectPdf ? "btn-emerald" : "btn-secondary"
+                  }`}
                 >
-                  <ExternalLink className="w-3.5 h-3.5" />
-                  <span>{access.primaryAction.label}</span>
+                  {access.hasDirectPdf ? (
+                    <FileText className="w-4 h-4" />
+                  ) : (
+                    <ExternalLink className="w-3.5 h-3.5" />
+                  )}
+                  <span>{access.hasDirectPdf ? "View PDF" : "View at source"}</span>
+                  <ArrowUpRight className="w-3 h-3 opacity-70" />
                 </a>
               )}
+
+              {access.secondaryActions.slice(0, 2).map((action) => (
+                <a
+                  key={action.url}
+                  href={action.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="btn btn-ghost h-9 px-3 text-[11px] font-mono uppercase tracking-wider"
+                  title={action.label}
+                >
+                  <ExternalLink className="w-3 h-3" />
+                  <span>{action.label}</span>
+                </a>
+              ))}
             </div>
-          </div>
+
+            <p className="font-mono text-[10px] text-[var(--text-muted)] leading-relaxed">
+              Access paths resolve directly from upstream repository metadata — no uploads, no mirrors, no model intermediaries.
+            </p>
+          </section>
+
+          {/* Evidence list */}
+          <section className="space-y-3">
+            <div className="flex items-center gap-2">
+              <Quote className="w-4 h-4 text-[var(--color-primary)]" />
+              <h2 className="section-index">
+                <span className="num">02.3</span> Captured Evidence
+              </h2>
+              <span className="h-px flex-1 bg-[var(--border-dim)]" />
+              <span className="font-mono text-[11px] text-[var(--text-muted)]">
+                {paperEvidence.length} {paperEvidence.length === 1 ? "record" : "records"}
+              </span>
+            </div>
+
+            {paperEvidence.length === 0 ? (
+              <div className="tech-card bracketed p-8 text-center space-y-3">
+                <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-md border border-[var(--border-primary-dim)] bg-[rgba(58, 157, 124,0.06)] text-[var(--color-primary-bright)]">
+                  <Quote className="h-5 w-5" />
+                </div>
+                <p className="text-base text-[var(--text-secondary)] font-serif-italic">
+                  No evidence captured yet for this paper.
+                </p>
+                <p className="font-mono text-[10px] text-[var(--text-muted)] uppercase tracking-wider leading-relaxed">
+                  Highlight a passage in the abstract above, or write a synthesis note using the capture panel.
+                </p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {paperEvidence.map((ev) => (
+                  <article key={ev.id} className="paper-card p-4 space-y-2.5">
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className="hud-badge brass py-1 px-2.5 text-[10px]">
+                          <span className="hud-dot" />
+                          <span>{ev.field}</span>
+                        </span>
+                        <span
+                          className={`hud-badge ${
+                            ev.kind === "author passage" ? "green" : "coral"
+                          } py-1 px-2.5 text-[10px]`}
+                        >
+                          {ev.kind === "author passage" ? "Passage" : "Note"}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className="font-mono text-[10px] text-[var(--text-muted)] uppercase tracking-wider">
+                          {new Date(ev.createdAt).toLocaleDateString(undefined, {
+                            month: "short",
+                            day: "numeric",
+                            year: "numeric",
+                          })}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => handleDelete(ev.id)}
+                          className="btn btn-ghost h-7 w-7 p-0"
+                          title="Delete evidence"
+                          aria-label="Delete evidence"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    </div>
+                    <p
+                      className={`text-[13.5px] leading-relaxed font-sans ${
+                        ev.kind === "author passage"
+                          ? "italic text-[var(--text-primary)]"
+                          : "text-[var(--text-secondary)]"
+                      }`}
+                    >
+                      {ev.kind === "author passage" ? `\u201C${ev.statement}\u201D` : ev.statement}
+                    </p>
+                  </article>
+                ))}
+              </div>
+            )}
+          </section>
         </div>
+
+        {/* ============ RIGHT: capture form (sticky) ============ */}
+        <aside className="lg:col-span-5">
+          <section className="tech-card bracketed p-5 sm:p-6 space-y-5 lg:sticky lg:top-24">
+            <div className="flex items-center gap-2">
+              <PlusCircle className="w-4 h-4 text-[var(--color-primary)]" />
+              <h2 className="section-index">
+                <span className="num">02.4</span> Capture Evidence
+              </h2>
+              <span className="h-px flex-1 bg-[var(--border-dim)]" />
+            </div>
+
+            {/* Field selector */}
+            <div className="space-y-1.5">
+              <label
+                htmlFor="reader-field-select"
+                className="font-mono text-[10px] uppercase tracking-wider text-[var(--text-muted)] block"
+              >
+                Classification field
+              </label>
+              <select
+                id="reader-field-select"
+                value={selectedField}
+                onChange={(e) => setSelectedField(e.target.value as Evidence["field"])}
+                className="w-full bg-[var(--bg-obsidian)] border border-[var(--border-dim)] rounded-md px-3 py-2 text-sm text-[var(--text-primary)] outline-none focus:border-[var(--color-primary)] transition-colors"
+              >
+                {fields.map((f) => (
+                  <option key={f} value={f}>
+                    {f}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* Kind toggle */}
+            <div className="space-y-1.5">
+              <span className="font-mono text-[10px] uppercase tracking-wider text-[var(--text-muted)] block">
+                Evidence kind
+              </span>
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  type="button"
+                  onClick={() => setEvidenceKind("author passage")}
+                  className={`rounded-md border px-3 py-2 text-xs font-mono font-semibold uppercase tracking-wider transition-all ${
+                    evidenceKind === "author passage"
+                      ? "border-[var(--color-green)] bg-[rgba(107,168,136,0.16)] text-[var(--color-green-bright)] shadow-[0_0_12px_var(--color-green-glow)]"
+                      : "border-[var(--border-dim)] text-[var(--text-secondary)] hover:border-[var(--border-medium)] hover:text-[var(--text-primary)]"
+                  }`}
+                >
+                  Author passage
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setEvidenceKind("researcher note")}
+                  className={`rounded-md border px-3 py-2 text-xs font-mono font-semibold uppercase tracking-wider transition-all ${
+                    evidenceKind === "researcher note"
+                      ? "border-[var(--color-coral)] bg-[rgba(217,119,87,0.16)] text-[var(--color-coral)] shadow-[0_0_12px_var(--color-coral-glow)]"
+                      : "border-[var(--border-dim)] text-[var(--text-secondary)] hover:border-[var(--border-medium)] hover:text-[var(--text-primary)]"
+                  }`}
+                >
+                  Researcher note
+                </button>
+              </div>
+            </div>
+
+            {/* Textarea */}
+            <div className="space-y-1.5">
+              <label
+                htmlFor="reader-evidence-input"
+                className="font-mono text-[10px] uppercase tracking-wider text-[var(--text-muted)] block"
+              >
+                {evidenceKind === "author passage" ? "Verbatim quote" : "Synthesis note"}
+              </label>
+              <textarea
+                id="reader-evidence-input"
+                rows={5}
+                value={textInput}
+                onChange={(e) => setTextInput(e.target.value)}
+                placeholder={
+                  evidenceKind === "author passage"
+                    ? "Highlight any passage in the abstract above — or paste a verbatim excerpt here."
+                    : "Write your own interpretation, critique, or synthesis of this paper."
+                }
+                className="w-full bg-[var(--bg-obsidian)] border border-[var(--border-dim)] rounded-md p-3 text-sm text-[var(--text-primary)] placeholder:text-[var(--text-faint)] outline-none focus:border-[var(--color-primary)] transition-colors resize-y font-sans leading-relaxed"
+              />
+
+              {evidenceKind === "author passage" && trimmedInput.length > 0 && (
+                <div
+                  className={`flex items-center gap-1.5 font-mono text-[10px] ${
+                    isVerbatimExcerpt
+                      ? "text-[var(--color-green-bright)]"
+                      : "text-[var(--color-red)]"
+                  }`}
+                >
+                  {isVerbatimExcerpt ? (
+                    <CheckCircle2 className="w-3 h-3 shrink-0" />
+                  ) : (
+                    <AlertTriangle className="w-3 h-3 shrink-0" />
+                  )}
+                  <span>
+                    {isVerbatimExcerpt
+                      ? "Verified verbatim excerpt from the abstract."
+                      : "Not a verbatim match against the abstract."}
+                  </span>
+                </div>
+              )}
+
+              {evidenceKind === "author passage" && (
+                <p className="font-mono text-[10px] text-[var(--text-muted)] leading-relaxed">
+                  Author passages are stored verbatim and matched against the paper&apos;s abstract. Paraphrases belong to researcher notes.
+                </p>
+              )}
+            </div>
+
+            {/* Capture message */}
+            {captureMessage && (
+              <div
+                className={`flex items-start gap-2 rounded-md border px-3 py-2.5 text-xs ${
+                  captureMessage.type === "success"
+                    ? "border-[var(--border-emerald-dim)] bg-[rgba(107,168,136,0.08)] text-[var(--color-green-bright)]"
+                    : captureMessage.type === "error"
+                      ? "border-[var(--border-red-dim)] bg-[rgba(224,104,90,0.08)] text-[var(--color-red)]"
+                      : "border-[var(--border-primary-dim)] bg-[rgba(58, 157, 124,0.08)] text-[var(--color-primary-bright)]"
+                }`}
+              >
+                {captureMessage.type === "success" ? (
+                  <CheckCircle2 className="w-3.5 h-3.5 mt-0.5 shrink-0" />
+                ) : captureMessage.type === "error" ? (
+                  <AlertTriangle className="w-3.5 h-3.5 mt-0.5 shrink-0" />
+                ) : (
+                  <Quote className="w-3.5 h-3.5 mt-0.5 shrink-0" />
+                )}
+                <span className="leading-relaxed">{captureMessage.text}</span>
+              </div>
+            )}
+
+            {/* Submit */}
+            <button
+              type="button"
+              disabled={
+                isCapturing ||
+                !trimmedInput ||
+                (evidenceKind === "author passage" && !isVerbatimExcerpt)
+              }
+              onClick={handleSaveEvidence}
+              className="btn btn-primary w-full h-11 text-sm font-mono font-bold uppercase tracking-wider disabled:opacity-40 disabled:cursor-not-allowed"
+            >
+              <CheckCircle2 className="w-4 h-4" />
+              <span>{isCapturing ? "Capturing…" : "Capture evidence"}</span>
+            </button>
+          </section>
+        </aside>
       </div>
     </div>
   );
