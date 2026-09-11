@@ -1,13 +1,11 @@
 "use client";
 
 import { Toaster as Sonner, ToasterProps } from "sonner";
-import { useAppStore } from "@/store/app-store";
 
 const Toaster = ({ ...props }: ToasterProps) => {
-  const theme = useAppStore((s) => s.theme);
   return (
     <Sonner
-      theme={theme}
+      theme="dark"
       className="toaster group"
       style={
         {

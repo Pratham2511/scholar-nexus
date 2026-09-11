@@ -3,129 +3,118 @@
 import { useEffect, useRef } from "react";
 
 /**
- * Optical Reticle Custom Cursor
- *
- * Designed for precision research instruments:
- * - 0 React state updates on mousemove (pure direct DOM mutation via RAF)
- * - Automatic graceful fallback on touch devices (maxTouchPoints > 0)
- * - Full respect for prefers-reduced-motion
- * - Non-destructive text selection (yields to native caret on inputs)
- * - Semantic states: default crosshair, action lock, evidence bracket, text yield
+ * ScholarNexus Academic Ambient Cursor
+ * - Refined, zero-delay warm gold pointer follower
+ * - Native pointer is 100% active, crisp, and lag-free
+ * - Seamlessly accents interactive elements with a warm gold ambient aura
  */
 export function CustomCursor() {
-  const cursorRef = useRef<HTMLDivElement>(null);
+  const dotRef = useRef<HTMLDivElement>(null);
+  const ringRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    // Disable on touch devices, SSR, or if user prefers reduced motion
     if (
       typeof window === "undefined" ||
-      navigator.maxTouchPoints > 0 ||
+      !window.matchMedia("(pointer: fine)").matches ||
       window.matchMedia("(prefers-reduced-motion: reduce)").matches
     ) {
       return;
     }
 
-    const cursorEl = cursorRef.current;
-    if (!cursorEl) return;
+    const dot = dotRef.current;
+    const ring = ringRef.current;
+    if (!dot || !ring) return;
 
-    let mouseX = -100;
-    let mouseY = -100;
-    let currentX = -100;
-    let currentY = -100;
+    let targetX = -200;
+    let targetY = -200;
+    let ringX = -200;
+    let ringY = -200;
     let isVisible = false;
-    let isMouseDown = false;
-    let currentState: "default" | "action" | "paper" | "text" = "default";
+    let isHovering = false;
     let rafId: number | null = null;
 
-    document.documentElement.classList.add("has-custom-cursor");
-
-    const updatePosition = () => {
-      // Smooth 0.15 lerp for the outer reticle assembly
-      currentX += (mouseX - currentX) * 0.35;
-      currentY += (mouseY - currentY) * 0.35;
-
-      cursorEl.style.transform = `translate3d(${currentX}px, ${currentY}px, 0)`;
-
-      rafId = requestAnimationFrame(updatePosition);
-    };
-
-    rafId = requestAnimationFrame(updatePosition);
-
     const onMouseMove = (e: MouseEvent) => {
-      mouseX = e.clientX;
-      mouseY = e.clientY;
+      targetX = e.clientX;
+      targetY = e.clientY;
 
       if (!isVisible) {
         isVisible = true;
-        cursorEl.style.opacity = "1";
+        dot.style.opacity = "0.75";
+        ring.style.opacity = "1";
       }
-    };
 
-    const updateSemanticState = (target: HTMLElement | null) => {
+      const target = e.target as HTMLElement | null;
       if (!target) return;
 
-      let nextState: "default" | "action" | "paper" | "text" = "default";
+      const isInput = Boolean(
+        target.closest("input, textarea, [contenteditable='true'], select")
+      );
+      const isAction = Boolean(
+        target.closest("button, a, [role='button'], .btn, .tech-card, .paper-card, summary, input[type='checkbox']")
+      );
 
-      if (target.closest("input, textarea, [contenteditable='true']")) {
-        nextState = "text";
-      } else if (
-        target.closest(
-          ".paper-row, article.paper-card, [data-evidence-card], .reading-passage"
-        )
-      ) {
-        nextState = "paper";
-      } else if (
-        target.closest(
-          "a, button, [role='button'], [data-slot='button'], summary, select, [tabindex='0']"
-        )
-      ) {
-        nextState = "action";
+      if (isInput) {
+        dot.style.opacity = "0";
+        ring.style.opacity = "0";
+      } else {
+        dot.style.opacity = "0.75";
+        ring.style.opacity = "1";
       }
 
-      if (nextState !== currentState) {
-        currentState = nextState;
-        cursorEl.dataset.state = nextState;
+      if (isAction !== isHovering) {
+        isHovering = isAction;
+        if (isHovering) {
+          ring.style.width = "40px";
+          ring.style.height = "40px";
+          ring.style.marginLeft = "-20px";
+          ring.style.marginTop = "-20px";
+          ring.style.borderColor = "rgba(129, 140, 248, 0.7)";
+          ring.style.backgroundColor = "rgba(99, 102, 241, 0.08)";
+          ring.style.boxShadow = "0 0 16px rgba(99, 102, 241, 0.25)";
+        } else {
+          ring.style.width = "28px";
+          ring.style.height = "28px";
+          ring.style.marginLeft = "-14px";
+          ring.style.marginTop = "-14px";
+          ring.style.borderColor = "rgba(129, 140, 248, 0.35)";
+          ring.style.backgroundColor = "transparent";
+          ring.style.boxShadow = "none";
+        }
       }
-    };
-
-    const onMouseOver = (e: MouseEvent) => {
-      updateSemanticState(e.target as HTMLElement | null);
-    };
-
-    const onMouseDown = () => {
-      isMouseDown = true;
-      cursorEl.dataset.active = "true";
-    };
-
-    const onMouseUp = () => {
-      isMouseDown = false;
-      cursorEl.dataset.active = "false";
     };
 
     const onMouseLeave = () => {
       isVisible = false;
-      cursorEl.style.opacity = "0";
+      dot.style.opacity = "0";
+      ring.style.opacity = "0";
     };
 
     const onMouseEnter = () => {
       isVisible = true;
-      cursorEl.style.opacity = "1";
+      dot.style.opacity = "0.75";
+      ring.style.opacity = "1";
+    };
+
+    const loop = () => {
+      dot.style.transform = `translate3d(${targetX}px, ${targetY}px, 0)`;
+
+      const speed = 0.22;
+      ringX += (targetX - ringX) * speed;
+      ringY += (targetY - ringY) * speed;
+      ring.style.transform = `translate3d(${ringX}px, ${ringY}px, 0)`;
+
+      rafId = requestAnimationFrame(loop);
     };
 
     window.addEventListener("mousemove", onMouseMove, { passive: true });
-    window.addEventListener("mouseover", onMouseOver, { passive: true });
-    window.addEventListener("mousedown", onMouseDown, { passive: true });
-    window.addEventListener("mouseup", onMouseUp, { passive: true });
     document.documentElement.addEventListener("mouseleave", onMouseLeave);
     document.documentElement.addEventListener("mouseenter", onMouseEnter);
 
+    rafId = requestAnimationFrame(loop);
+
     return () => {
       if (rafId) cancelAnimationFrame(rafId);
-      document.documentElement.classList.remove("has-custom-cursor");
       window.removeEventListener("mousemove", onMouseMove);
-      window.removeEventListener("mouseover", onMouseOver);
-      window.removeEventListener("mousedown", onMouseDown);
-      window.removeEventListener("mouseup", onMouseUp);
       document.documentElement.removeEventListener("mouseleave", onMouseLeave);
       document.documentElement.removeEventListener("mouseenter", onMouseEnter);
     };
@@ -133,25 +122,20 @@ export function CustomCursor() {
 
   return (
     <div
-      ref={cursorRef}
       aria-hidden="true"
-      className="reticle-cursor fixed top-0 left-0 pointer-events-none z-[9999] opacity-0 will-change-transform"
-      data-state="default"
-      data-active="false"
-      style={{
-        transform: "translate3d(-100px, -100px, 0)",
-      }}
+      className="fixed inset-0 pointer-events-none z-[999999] overflow-hidden select-none"
     >
-      {/* Central Datum Core */}
-      <div className="reticle-dot" />
+      {/* Precision Micro Point */}
+      <div
+        ref={dotRef}
+        className="fixed top-0 left-0 w-1.5 h-1.5 -ml-[3px] -mt-[3px] rounded-full bg-[#818cf8] opacity-0 transition-opacity duration-150 will-change-transform shadow-[0_0_8px_#818cf8]"
+      />
 
-      {/* Crosshair & Bracket Reticles */}
-      <div className="reticle-frame">
-        <span className="tick-north" />
-        <span className="tick-south" />
-        <span className="tick-east" />
-        <span className="tick-west" />
-      </div>
+      {/* Radiant Iris Ambient Ring */}
+      <div
+        ref={ringRef}
+        className="fixed top-0 left-0 w-7 h-7 -ml-3.5 -mt-3.5 rounded-full border border-[#818cf8]/35 opacity-0 transition-[width,height,margin,border-color,background-color,box-shadow,opacity] duration-200 ease-out will-change-transform"
+      />
     </div>
   );
 }

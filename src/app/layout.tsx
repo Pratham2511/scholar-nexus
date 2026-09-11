@@ -1,39 +1,18 @@
 import type { Metadata } from 'next';
-import { Newsreader, Geist, Geist_Mono } from 'next/font/google';
 import './globals.css';
 import { CustomCursor } from '@/components/ui/custom-cursor';
 import { PageLoader } from '@/components/ui/page-loader';
-
-const newsreader = Newsreader({
-  subsets: ['latin'],
-  weight: ['300', '400', '500', '600'],
-  style: ['normal', 'italic'],
-  variable: '--font-display',
-  display: 'swap',
-});
-
-const geist = Geist({
-  subsets: ['latin'],
-  weight: ['300', '400', '500', '600'],
-  variable: '--font-ui',
-  display: 'swap',
-});
-
-const geistMono = Geist_Mono({
-  subsets: ['latin'],
-  weight: ['400', '500', '600'],
-  variable: '--font-mono',
-  display: 'swap',
-});
+import { ResearchBackground } from '@/components/desk/research-background';
 
 export const metadata: Metadata = {
-  title: 'ScholarNexus — The Evidence Desk',
+  title: 'ScholarNexus — Literature Discovery & Systematic Synthesis',
   description:
-    'Search academic sources, organize a literature review, and trace findings to their supporting passages.',
+    'Multi-repository scholarly research workbench with citation intelligence, evidence extraction, and systematic review tools.',
   icons: { icon: '/logo.svg' },
   openGraph: {
-    title: 'ScholarNexus — The Evidence Desk',
-    description: 'A personal workspace for source-linked research.',
+    title: 'ScholarNexus — Literature Discovery & Systematic Synthesis',
+    description:
+      'Multi-repository scholarly research workbench with citation intelligence, evidence extraction, and systematic review tools.',
     siteName: 'ScholarNexus',
     type: 'website',
   },
@@ -45,11 +24,9 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html
-      lang="en"
-      className={`${newsreader.variable} ${geist.variable} ${geistMono.variable}`}
-    >
-      <body>
+    <html lang="en" className="dark">
+      <body className="bg-obsidian text-slate-100 antialiased selection:bg-indigo-500/30 selection:text-indigo-100">
+        <ResearchBackground />
         <CustomCursor />
         <PageLoader />
         {children}
@@ -57,4 +34,3 @@ export default function RootLayout({
     </html>
   );
 }
-

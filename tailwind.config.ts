@@ -67,9 +67,9 @@ const config: Config = {
         mono: ["var(--font-mono)", "Geist Mono", "monospace"],
       },
       borderRadius: {
-        sm: "2px",
-        md: "3px",
-        lg: "4px",
+        sm: "6px",
+        md: "10px",
+        lg: "16px",
       },
     },
   },
